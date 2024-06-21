@@ -176,9 +176,22 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         Container.ExecResult execResult =
                 container.executeJob("/elasticsearch/elasticsearch_source_and_sink.conf");
         Assertions.assertEquals(0, execResult.getExitCode());
-        List<String> sinkData = readSinkData();
+        List<String> sinkData = readSinkData("st_index2");
         // for DSL is: {"range":{"c_int":{"gte":10,"lte":20}}}
         Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
+    }
+
+    @TestTemplate
+    public void testElasticsearchWithMultiSink(TestContainer container)
+            throws IOException, InterruptedException {
+        Container.ExecResult execResult =
+                container.executeJob("/elasticsearch/elasticsearch_source_and_multi_sink.conf");
+        Assertions.assertEquals(0, execResult.getExitCode());
+        List<String> sinkData1 = readSinkData("st_index5");
+        List<String> sinkData2 = readSinkData("st_index6");
+        // for DSL is: {"range":{"c_int":{"gte":10,"lte":20}}}
+        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData1);
+        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData2);
     }
 
     @TestTemplate
@@ -262,7 +275,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         return getDocsWithTransformDate(source, "st_index4");
     }
 
-    private List<String> readSinkData() throws InterruptedException {
+    private List<String> readSinkData(String index) throws InterruptedException {
         // wait for index refresh
         Thread.sleep(2000);
         List<String> source =
@@ -281,7 +294,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                         "c_int",
                         "c_date",
                         "c_timestamp");
-        return getDocsWithTransformTimestamp(source, "st_index2");
+        return getDocsWithTransformTimestamp(source, index);
     }
 
     private List<String> getDocsWithTransformTimestamp(List<String> source, String index) {
