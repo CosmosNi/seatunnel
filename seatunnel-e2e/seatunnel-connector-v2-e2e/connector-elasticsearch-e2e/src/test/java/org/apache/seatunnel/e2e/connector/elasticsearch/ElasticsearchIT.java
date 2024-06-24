@@ -17,6 +17,7 @@
 
 package org.apache.seatunnel.e2e.connector.elasticsearch;
 
+import com.google.common.collect.Maps;
 import org.apache.seatunnel.shade.com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.seatunnel.shade.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.seatunnel.shade.com.fasterxml.jackson.databind.ObjectMapper;
@@ -185,13 +186,15 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
     public void testElasticsearchWithMultiSink(TestContainer container)
             throws IOException, InterruptedException {
         Container.ExecResult execResult =
-                container.executeJob("/elasticsearch/elasticsearch_source_and_multi_sink.conf");
+                container.executeJob("/elasticsearch/fakeSource_source_to_elasticsearch_multi_sink.conf");
         Assertions.assertEquals(0, execResult.getExitCode());
-        List<String> sinkData1 = readSinkData("st_index5");
-        List<String> sinkData2 = readSinkData("st_index6");
-        // for DSL is: {"range":{"c_int":{"gte":10,"lte":20}}}
-        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData1);
-        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData2);
+        List<String> sinkIndexData5 = readMultiSinkData5("st_index5");
+        List<String> sinkIndexData6 = readMultiSinkData6("st_index6");
+        String stIndex5 = "{\"id\":1,\"val_bool\":\"true\",\"val_tinyint\":1,\"val_smallint\":2,\"val_int\":3," +
+                "\"val_bigint\":4,\"val_float\":4.3,\"val_double\":5.3,\"val_decimal\":6.3,\"val_string\":\"NEW\"}";
+        String stIndex6 = "{\"id\":1,\"val_bool\":\"true\",\"val_tinyint\":1,\"val_smallint\":2,\"val_int\":3,\"val_bigint\":4,\"val_float\":4.3,\"val_double\":5.3,\"val_decimal\":6.3}";
+        Assertions.assertIterableEquals(Lists.newArrayList(stIndex5), sinkIndexData5);
+        Assertions.assertIterableEquals(Lists.newArrayList(stIndex6), sinkIndexData6);
     }
 
     @TestTemplate
@@ -295,6 +298,72 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                         "c_date",
                         "c_timestamp");
         return getDocsWithTransformTimestamp(source, index);
+    }
+    private List<String> readMultiSinkData5(String index) throws InterruptedException {
+        // wait for index refresh
+        Thread.sleep(2000);
+        List<String> source =
+                Lists.newArrayList(
+                        "id",
+                        "c_bool",
+                        "c_tinyint",
+                        "c_smallint",
+                        "c_int",
+                        "c_bigint",
+                        "c_float",
+                        "c_double",
+                        "c_decimal",
+                        "c_string");
+        ScrollResult scrollResult = esRestClient.searchByScroll(index, source, Maps.newHashMap(), "1m", 1000);
+        scrollResult
+                .getDocs()
+                .forEach(
+                        x -> {
+                            x.remove("_index");
+                            x.remove("_type");
+                            x.remove("_id");
+                        });
+        List<String> docs =
+                scrollResult.getDocs().stream()
+                        .sorted(
+                                Comparator.comparingInt(
+                                        o -> Integer.valueOf(o.get("c_int").toString())))
+                        .map(JsonUtils::toJsonString)
+                        .collect(Collectors.toList());
+        return docs;
+    }
+
+    private List<String> readMultiSinkData6(String index) throws InterruptedException {
+        // wait for index refresh
+        Thread.sleep(2000);
+        List<String> source =
+                Lists.newArrayList(
+                        "id",
+                        "c_bool",
+                        "c_tinyint",
+                        "c_smallint",
+                        "c_int",
+                        "c_bigint",
+                        "c_float",
+                        "c_double",
+                        "c_decimal");
+        ScrollResult scrollResult = esRestClient.searchByScroll(index, source, Maps.newHashMap(), "1m", 1000);
+        scrollResult
+                .getDocs()
+                .forEach(
+                        x -> {
+                            x.remove("_index");
+                            x.remove("_type");
+                            x.remove("_id");
+                        });
+        List<String> docs =
+                scrollResult.getDocs().stream()
+                        .sorted(
+                                Comparator.comparingInt(
+                                        o -> Integer.valueOf(o.get("c_int").toString())))
+                        .map(JsonUtils::toJsonString)
+                        .collect(Collectors.toList());
+        return docs;
     }
 
     private List<String> getDocsWithTransformTimestamp(List<String> source, String index) {
