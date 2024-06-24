@@ -187,7 +187,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
             throws IOException, InterruptedException {
         Container.ExecResult execResult =
                 container.executeJob(
-                        "/elasticsearch/fakeSource_source_to_elasticsearch_multi_sink.conf");
+                        "/elasticsearch/fakesource_to_elasticsearch_multi_sink.conf");
         Assertions.assertEquals(0, execResult.getExitCode());
         List<String> sinkIndexData5 = readMultiSinkData5("st_index5");
         List<String> sinkIndexData6 = readMultiSinkData6("st_index6");
