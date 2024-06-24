@@ -323,8 +323,10 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                         "c_double",
                         "c_decimal",
                         "c_string");
-        ScrollResult scrollResult =
-                esRestClient.searchByScroll(index, source, Maps.newHashMap(), "1m", 1000);
+        Map<String, Object> query = new HashMap<>();
+        query.put("match_all", Maps.newHashMap());
+
+        ScrollResult scrollResult = esRestClient.searchByScroll(index, source, query, "1m", 1000);
         scrollResult
                 .getDocs()
                 .forEach(
@@ -357,8 +359,10 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                         "c_float",
                         "c_double",
                         "c_decimal");
-        ScrollResult scrollResult =
-                esRestClient.searchByScroll(index, source, Maps.newHashMap(), "1m", 1000);
+        Map<String, Object> query = new HashMap<>();
+        query.put("match_all", Maps.newHashMap());
+
+        ScrollResult scrollResult = esRestClient.searchByScroll(index, source, query, "1m", 1000);
         scrollResult
                 .getDocs()
                 .forEach(
