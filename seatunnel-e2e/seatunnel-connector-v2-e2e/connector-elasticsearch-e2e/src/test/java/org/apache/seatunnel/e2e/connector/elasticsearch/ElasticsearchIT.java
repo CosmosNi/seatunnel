@@ -197,10 +197,9 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         List<String> sinkIndexData5 = readMultiSinkData5("st_index5");
         List<String> sinkIndexData6 = readMultiSinkData6("st_index6");
         String stIndex5 =
-                "{\"id\":1,\"val_bool\":\"true\",\"val_tinyint\":1,\"val_smallint\":2,\"val_int\":3,"
-                        + "\"val_bigint\":4,\"val_float\":4.3,\"val_double\":5.3,\"val_decimal\":6.3,\"val_string\":\"NEW\"}";
+                "{\"c_smallint\":2,\"c_string\":\"NEW\",\"c_float\":4.3,\"c_double\":5.3,\"c_decimal\":6.3,\"id\":1,\"c_int\":3,\"c_bigint\":4,\"c_bool\":true,\"c_tinyint\":1}";
         String stIndex6 =
-                "{\"id\":1,\"val_bool\":\"true\",\"val_tinyint\":1,\"val_smallint\":2,\"val_int\":3,\"val_bigint\":4,\"val_float\":4.3,\"val_double\":5.3,\"val_decimal\":6.3}";
+                "{\"c_smallint\":2,\"c_float\":4.3,\"c_double\":5.3,\"c_decimal\":6.3,\"id\":1,\"c_int\":3,\"c_bigint\":4,\"c_bool\":true,\"c_tinyint\":1}";
         Assertions.assertIterableEquals(Lists.newArrayList(stIndex5), sinkIndexData5);
         Assertions.assertIterableEquals(Lists.newArrayList(stIndex6), sinkIndexData6);
     }
