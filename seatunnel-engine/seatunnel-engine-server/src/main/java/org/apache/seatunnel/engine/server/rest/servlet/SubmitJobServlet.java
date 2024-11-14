@@ -27,9 +27,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.apache.seatunnel.engine.server.rest.RestConstant.ENV_CONFIG_STYLE;
-import static org.apache.seatunnel.engine.server.rest.RestConstant.HOCON;
-
 public class SubmitJobServlet extends BaseServlet {
     private final JobInfoService jobInfoService;
 
@@ -43,10 +40,6 @@ public class SubmitJobServlet extends BaseServlet {
 
         Map<String, String> requestParams = getParameterMap(req);
 
-        if (HOCON.equalsIgnoreCase(requestParams.get(ENV_CONFIG_STYLE))) {
-            writeJson(resp, jobInfoService.submitJob(requestParams, requestHoconBody(req)));
-        } else {
-            writeJson(resp, jobInfoService.submitJob(requestParams, requestBody(req)));
-        }
+        writeJson(resp, jobInfoService.submitJob(requestParams, requestBody(req)));
     }
 }
