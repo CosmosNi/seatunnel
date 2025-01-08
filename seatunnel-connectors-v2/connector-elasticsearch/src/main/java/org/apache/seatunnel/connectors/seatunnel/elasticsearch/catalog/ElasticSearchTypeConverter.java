@@ -150,6 +150,12 @@ public class ElasticSearchTypeConverter implements BasicTypeConverter<BasicTypeD
                 builder.dataType(rowType);
                 break;
             case EsType.NESTED:
+                builder.dataType(
+                        new ArrayType<>(
+                                Map[].class,
+                                new MapType<>(BasicType.STRING_TYPE, BasicType.STRING_TYPE)));
+                break;
+            case EsType.NESTED:
                 builder.dataType(ArrayType.MAP_ARRAY_TYPE);
                 break;
             case INTEGER:
