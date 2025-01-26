@@ -471,7 +471,8 @@ public class MultipleTableJobConfigParser {
                         new ArrayList<>(inputActions),
                         transform,
                         jarUrls,
-                        new HashSet<>());
+                        new HashSet<>(),
+                        readonlyConfig.get(CommonOptions.PLUGIN_OUTPUT));
         transformAction.setParallelism(parallelism);
 
         List<Tuple2<CatalogTable, Action>> actions = new ArrayList<>();
@@ -782,8 +783,8 @@ public class MultipleTableJobConfigParser {
                 sourceCheckpointData.get(0).getSubtaskState().stream()
                         .flatMap(
                                 (Function<
-                                                JobPipelineCheckpointData.ActionSubtaskState,
-                                                Stream<List<byte[]>>>)
+                                        JobPipelineCheckpointData.ActionSubtaskState,
+                                        Stream<List<byte[]>>>)
                                         state ->
                                                 state == null
                                                         ? Stream.of(Collections.emptyList())

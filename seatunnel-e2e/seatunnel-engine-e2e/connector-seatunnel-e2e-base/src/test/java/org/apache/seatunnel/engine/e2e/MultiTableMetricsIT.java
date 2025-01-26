@@ -85,15 +85,15 @@ public class MultiTableMetricsIT {
                         instance -> {
                             Response response =
                                     given().get(
-                                                    HOST
-                                                            + instance.getCluster()
-                                                                    .getLocalMember()
-                                                                    .getAddress()
-                                                                    .getPort()
-                                                            + RestConstant.CONTEXT_PATH
-                                                            + RestConstant.REST_URL_JOB_INFO
-                                                            + "/"
-                                                            + batchJobProxy.getJobId());
+                                            HOST
+                                                    + instance.getCluster()
+                                                    .getLocalMember()
+                                                    .getAddress()
+                                                    .getPort()
+                                                    + RestConstant.CONTEXT_PATH
+                                                    + RestConstant.REST_URL_JOB_INFO
+                                                    + "/"
+                                                    + batchJobProxy.getJobId());
                             // In the test example, the data size of a single [3, "C", 100] is 13
                             int dataSize = 13;
                             response.prettyPrint();
@@ -132,53 +132,100 @@ public class MultiTableMetricsIT {
                                             equalTo(String.valueOf(dataSize * 10)))
                                     .body(
                                             "metrics.TableSinkWriteBytes.'fake.public.table2'",
-                                            equalTo(String.valueOf(dataSize * 5)));
+                                            equalTo(String.valueOf(dataSize * 5)))
+                                    .body(
+                                            "metrics.TransformOutputCount.'Transform[0]-Sql'.'fake3'",
+                                            equalTo("10"))
+                                    .body(
+                                            "metrics.TransformOutputCount.'Transform[1]-Sql'.'fake4'",
+                                            equalTo("10"))
+                                    .body(
+                                            "metrics.TransformOutputCount.'Transform[2]-Sql'.'fake5'",
+                                            equalTo("10"))
+                                    .body(
+                                            "metrics.TransformOutputCount.'Transform[3]-Sql'.'fake6'",
+                                            equalTo("5"))
+                                    .body(
+                                            "metrics.TransformOutputCount.'Transform[4]-Sql'.'fake7'",
+                                            equalTo("5"))
+                                    .body(
+                                            "metrics.TransformOutputCount.'Transform[5]-Sql'.'fake8'",
+                                            equalTo("5"));
                             Assertions.assertTrue(
                                     Double.parseDouble(response.path("metrics.SourceReceivedQPS"))
-                                                    > 0
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSourceReceivedQPS.'fake.table1'"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.TableSourceReceivedQPS.'fake.table1'"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSourceReceivedQPS.'fake.public.table2'"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.TableSourceReceivedQPS.'fake.public.table2'"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path("metrics.SinkWriteQPS"))
-                                                    > 0
+                                            response.path("metrics.SinkWriteQPS"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSinkWriteQPS.'fake.table1'"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.TableSinkWriteQPS.'fake.table1'"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSinkWriteQPS.'fake.public.table2'"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.TableSinkWriteQPS.'fake.public.table2'"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.SourceReceivedBytesPerSeconds"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.SourceReceivedBytesPerSeconds"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSourceReceivedBytesPerSeconds.'fake.table1'"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.TableSourceReceivedBytesPerSeconds.'fake.table1'"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSourceReceivedBytesPerSeconds.'fake.public.table2'"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.TableSourceReceivedBytesPerSeconds.'fake.public.table2'"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.SinkWriteBytesPerSeconds"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.SinkWriteBytesPerSeconds"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSinkWriteBytesPerSeconds.'fake.table1'"))
-                                                    > 0
+                                            response.path(
+                                                    "metrics.TableSinkWriteBytesPerSeconds.'fake.table1'"))
+                                            > 0
                                             && Double.parseDouble(
-                                                            response.path(
-                                                                    "metrics.TableSinkWriteBytesPerSeconds.'fake.public.table2'"))
-                                                    > 0);
+                                            response.path(
+                                                    "metrics.TableSinkWriteBytesPerSeconds.'fake.public.table2'"))
+                                            > 0
+                                            && Double.parseDouble(
+                                            response.path(
+                                                    "metrics.TransformOutputCount.'Transform[0]-Sql'.'fake3'"))
+                                            > 0
+                                            && Double.parseDouble(
+                                            response.path(
+                                                    "metrics.TransformOutputCount.'Transform[1]-Sql'"
+                                                            + ".'fake4'"))
+                                            > 0
+                                            && Double.parseDouble(
+                                            response.path(
+                                                    "metrics.TransformOutputCount.'Transform[2]-Sql'"
+                                                            + ".'fake5'"))
+                                            > 0
+                                            && Double.parseDouble(
+                                            response.path(
+                                                    "metrics.TransformOutputCount.'Transform[3]-Sql'"
+                                                            + ".'fake6'"))
+                                            > 0
+                                            && Double.parseDouble(
+                                            response.path(
+                                                    "metrics.TransformOutputCount.'Transform[4]-Sql'"
+                                                            + ".'fake7'"))
+                                            > 0
+                                            && Double.parseDouble(
+                                            response.path(
+                                                    "metrics.TransformOutputCount.'Transform[5]-Sql'"
+                                                            + ".'fake8'"))
+                                            > 0);
                         });
     }
 
