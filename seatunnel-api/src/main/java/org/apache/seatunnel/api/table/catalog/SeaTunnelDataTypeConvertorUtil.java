@@ -231,8 +231,8 @@ public class SeaTunnelDataTypeConvertorUtil {
             case DOUBLE:
                 return ArrayType.DOUBLE_ARRAY_TYPE;
             case MAP:
-                return new ArrayType<>(
-                        MapType.class, new MapType<>(BasicType.STRING_TYPE, BasicType.STRING_TYPE));
+                MapType<?, ?> mapType = (MapType<?, ?>) dataType;
+                return new ArrayType<>(MapType.class, mapType);
             default:
                 throw CommonError.unsupportedDataType("SeaTunnel", genericType, field);
         }
