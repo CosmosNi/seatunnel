@@ -37,7 +37,7 @@ public class HttpConfig {
             Options.key("keep_params_as_form")
                     .booleanType()
                     .defaultValue(false)
-                    .withDescription("Keep param form");
+                    .withDescription("Keep param as form");
     public static final Option<Long> TOTAL_PAGE_SIZE =
             Options.key("total_page_size")
                     .longType()
