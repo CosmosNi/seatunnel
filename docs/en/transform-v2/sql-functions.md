@@ -385,25 +385,25 @@ Example:
 
 ACOS(D)
 
-### MAX
+### ARRAY_MAX
 
-```MAX(ARRAY)```
+```ARRAY_MAX(ARRAY)```
 
 The MAX function returns the maximum value of the expression.
 
 Example:
 
-MAX(I)
+ARRAY_MAX(I)
 
-### MIN
+### ARRAY_MIN
 
-```MIN(ARRAY)```
+```ARRAY_MIN(ARRAY)```
 
 The MIN function returns the minimum value of the expression.
 
 Example:
 
-MIN(I)
+ARRAY_MIN(I)
 
 ### ASIN
 

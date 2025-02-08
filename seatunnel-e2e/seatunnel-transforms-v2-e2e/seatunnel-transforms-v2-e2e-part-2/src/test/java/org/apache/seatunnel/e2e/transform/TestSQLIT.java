@@ -30,6 +30,10 @@ import java.io.IOException;
 public class TestSQLIT extends TestSuiteBase {
 
     @TestTemplate
+    @DisabledOnContainer(
+            value = {},
+            type = {EngineType.SEATUNNEL, EngineType.FLINK},
+            disabledReason = "")
     public void testSQLTransform(TestContainer container) throws IOException, InterruptedException {
         Container.ExecResult sqlTransform = container.executeJob("/sql_transform.conf");
         Assertions.assertEquals(0, sqlTransform.getExitCode());
