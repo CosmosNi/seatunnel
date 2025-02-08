@@ -450,6 +450,9 @@ public class ZetaSQLType {
                 return BasicType.DOUBLE_TYPE;
             case ZetaSQLFunction.ARRAY:
                 return ArrayFunction.castArrayTypeMapping(function, inputRowType);
+            case ZetaSQLFunction.MAX:
+            case ZetaSQLFunction.MIN:
+                return ArrayFunction.getElementType(function, inputRowType);
             case ZetaSQLFunction.SPLIT:
                 return ArrayType.STRING_ARRAY_TYPE;
             case ZetaSQLFunction.NOW:

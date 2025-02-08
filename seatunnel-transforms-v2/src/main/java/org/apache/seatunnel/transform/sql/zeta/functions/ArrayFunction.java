@@ -17,6 +17,7 @@
 package org.apache.seatunnel.transform.sql.zeta.functions;
 
 import org.apache.seatunnel.api.table.type.ArrayType;
+import org.apache.seatunnel.api.table.type.SeaTunnelDataType;
 import org.apache.seatunnel.api.table.type.SeaTunnelRowType;
 import org.apache.seatunnel.common.utils.SeaTunnelException;
 
@@ -148,6 +149,14 @@ public class ArrayFunction {
             }
         }
         return arrayType == null ? String.class : arrayType;
+    }
+
+    public static SeaTunnelDataType<?> getElementType(
+            Function function, SeaTunnelRowType inputRowType) {
+        String columnName = function.getParameters().getExpressions().get(0).toString();
+        int columnIndex = inputRowType.indexOf(columnName);
+        ArrayType arrayType = (ArrayType) inputRowType.getFieldType(columnIndex);
+        return arrayType.getElementType();
     }
 
     private static List<Class<?>> getFunctionArgs(

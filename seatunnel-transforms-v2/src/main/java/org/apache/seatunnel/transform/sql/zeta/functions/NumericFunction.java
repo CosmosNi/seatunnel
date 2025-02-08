@@ -17,12 +17,15 @@
 
 package org.apache.seatunnel.transform.sql.zeta.functions;
 
+import org.apache.seatunnel.common.exception.CommonErrorCode;
 import org.apache.seatunnel.common.exception.CommonErrorCodeDeprecated;
 import org.apache.seatunnel.transform.exception.TransformException;
 import org.apache.seatunnel.transform.sql.zeta.ZetaSQLFunction;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
@@ -442,5 +445,53 @@ public class NumericFunction {
             v2 = (Number) args.get(1);
         }
         return round(v1, v2, RoundingMode.DOWN);
+    }
+
+    public static Object max(List<Object> args) {
+        if (args == null || args.isEmpty()) {
+            return null;
+        }
+        Object[] dataList = (Object[]) args.get(0);
+        if (dataList == null || dataList.length == 0) {
+            return null;
+        }
+        if (dataList[0] instanceof String) {
+            return Arrays.stream(dataList)
+                    .map(String.class::cast)
+                    .max(String::compareTo)
+                    .orElse(null);
+        } else if (dataList[0] instanceof Number) {
+            return Arrays.stream(dataList)
+                    .map(Number.class::cast)
+                    .max(Comparator.comparingDouble(Number::doubleValue))
+                    .orElse(null);
+        }
+        throw new TransformException(
+                CommonErrorCode.UNSUPPORTED_DATA_TYPE,
+                String.format("Unsupported function max() arguments: %s", args));
+    }
+
+    public static Object min(List<Object> args) {
+        if (args == null || args.isEmpty()) {
+            return null;
+        }
+        Object[] dataList = (Object[]) args.get(0);
+        if (dataList == null || dataList.length == 0) {
+            return null;
+        }
+        if (dataList[0] instanceof String) {
+            return Arrays.stream(dataList)
+                    .map(String.class::cast)
+                    .min(String::compareTo)
+                    .orElse(null);
+        } else if (dataList[0] instanceof Number) {
+            return Arrays.stream(dataList)
+                    .map(Number.class::cast)
+                    .min(Comparator.comparingDouble(Number::doubleValue))
+                    .orElse(null);
+        }
+        throw new TransformException(
+                CommonErrorCode.UNSUPPORTED_DATA_TYPE,
+                String.format("Unsupported function max() arguments: %s", args));
     }
 }
