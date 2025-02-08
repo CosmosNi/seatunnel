@@ -386,25 +386,25 @@ ABS(I)
 
 ACOS(D)
 
-### MAX
+### ARRAY_MAX
 
-```MAX(ARRAY)```
+```ARRAY_MAX(ARRAY)```
 
 MAX 函数返回表达式的最大值。
 
 示例:
 
-MAX(I)
+ARRAY_MAX(I)
 
-### MIN
+### ARRAY_MIN
 
-```MIN(ARRAY)```
+```ARRAY_MIN(ARRAY)```
 
 MIN 函数返回表达式的最小值。
 
 示例:
 
-MIN(I)
+ARRAY_MIN(I)
 
 
 ### ASIN
