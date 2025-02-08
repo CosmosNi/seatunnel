@@ -136,7 +136,12 @@ public class HttpClientProvider implements AutoCloseable {
             if (MapUtils.isNotEmpty(pageParams)) {
                 paramsMap.putAll(params);
             }
-            return doPost(uri, headers, paramsMap, body, true);
+            // Compatible with old versions
+            if (MapUtils.isNotEmpty(paramsMap)) {
+                headers = MapUtils.isEmpty(headers) ? new HashMap<>() : headers;
+                headers.putIfAbsent(HTTP.CONTENT_TYPE, APPLICATION_FORM);
+            }
+            return doPost(uri, headers, paramsMap, body);
         }
         if (HttpPost.METHOD_NAME.equals(method)) {
             // Create access address
@@ -145,7 +150,7 @@ public class HttpClientProvider implements AutoCloseable {
             addParameters(uriBuilder, params);
             URI uri = uriBuilder.build();
 
-            return doPost(uri, headers, pageParams, body, false);
+            return doPost(uri, headers, pageParams, body);
         }
         if (HttpGet.METHOD_NAME.equals(method)) {
             if (MapUtils.isEmpty(params)) {
@@ -335,8 +340,7 @@ public class HttpClientProvider implements AutoCloseable {
             URI uri,
             Map<String, String> headers,
             Map<String, Object> params,
-            Map<String, Object> body,
-            boolean keepParamsAsForm)
+            Map<String, Object> body)
             throws Exception {
         HttpPost httpPost = new HttpPost(uri);
         // set default request config
@@ -344,27 +348,7 @@ public class HttpClientProvider implements AutoCloseable {
         // set request header
         addHeaders(httpPost, headers);
         // add body in request
-        addBody(httpPost, body, params, keepParamsAsForm);
-        // return http response
-        return getResponse(httpPost);
-    }
-
-    public HttpResponse doPost(
-            String url,
-            Map<String, String> headers,
-            Map<String, String> params,
-            Map<String, Object> body)
-            throws Exception {
-        // create a new http get
-        HttpPost httpPost = new HttpPost(url);
-        // set default request config
-        httpPost.setConfig(requestConfig);
-        // set request header
-        addHeaders(httpPost, headers);
-        // set request params
-        addParameters(httpPost, params);
-        // add body in request
-        addBody(httpPost, body);
+        addBody(httpPost, body, params);
         // return http response
         return getResponse(httpPost);
     }
@@ -485,8 +469,7 @@ public class HttpClientProvider implements AutoCloseable {
     private void addBody(
             HttpEntityEnclosingRequestBase request,
             Map<String, Object> body,
-            Map<String, Object> params,
-            boolean keepParamsAsForm)
+            Map<String, Object> params)
             throws UnsupportedEncodingException {
         Map<String, Object> bodyMap = new HashedMap<>();
         if (MapUtils.isNotEmpty(body)) {
@@ -497,7 +480,7 @@ public class HttpClientProvider implements AutoCloseable {
                         && request.getHeaders(HTTP.CONTENT_TYPE).length > 0
                         && APPLICATION_FORM.equalsIgnoreCase(
                                 request.getHeaders(HTTP.CONTENT_TYPE)[0].getValue());
-        if (isFormSubmit || keepParamsAsForm) {
+        if (isFormSubmit) {
             Map<String, String> formParam = new HashedMap<>();
             if (MapUtils.isNotEmpty(params)) {
                 for (Map.Entry<String, Object> entry : params.entrySet()) {

@@ -182,6 +182,30 @@ connector will generate data as the following:
 |----------------------------------------------------------|
 | {"code":  200, "data":  "get success", "success":  true} |
 
+### keep_params_as_form
+For compatibility with old versions of http.
+When set to true,`<params>` and `<pageing>` will be submitted in the form.
+When set to false，`<params>` will be added to the url path,and `<pageing>` will be added to the body
+
+### params
+By default, the parameters will be added to the url path.
+If you need to keep the old version,see keep_params_as_form.
+
+### body
+The HTTP body is used to carry the actual data in requests or responses, including JSON, form submissions. 
+
+The reference format is as follows：
+```hocon
+body="{"id":1,"name":"setunnel"}"
+```
+
+For form submissions,please set the content-type as follows.
+```hocon
+headers {
+    Content-Type = "application/x-www-form-urlencoded"
+}
+```
+
 ### content_json
 
 This parameter can get some json data.If you only need the data in the 'book' section, configure `content_field = "$.store.book.*"`.
@@ -346,14 +370,6 @@ source {
 }
 
 ```
-
-### keep_params_as_form
-When set to true,params and page params will be submitted in the form.
-If the submission is application/json format,please do not set this value.
-
-### params
-By default, the parameters will be added to the url path.
-If form submission is required,please set keep_params_as_form true.
 
 ## Changelog
 

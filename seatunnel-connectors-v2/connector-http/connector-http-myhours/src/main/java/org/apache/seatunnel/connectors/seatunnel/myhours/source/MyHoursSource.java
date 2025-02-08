@@ -94,8 +94,7 @@ public class MyHoursSource extends HttpSource {
                             URI.create(myHoursLoginParameter.getUrl()),
                             Collections.emptyMap(),
                             Collections.emptyMap(),
-                            myHoursLoginParameter.getBody(),
-                            false);
+                            myHoursLoginParameter.getBody());
             if (HttpResponse.STATUS_OK == response.getCode()) {
                 String content = response.getContent();
                 if (!Strings.isNullOrEmpty(content)) {
