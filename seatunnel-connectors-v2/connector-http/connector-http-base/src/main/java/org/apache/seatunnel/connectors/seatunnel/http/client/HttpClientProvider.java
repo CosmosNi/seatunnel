@@ -144,9 +144,6 @@ public class HttpClientProvider implements AutoCloseable {
             return doPost(uri, headers, Collections.emptyMap(), body);
         }
         if (HttpGet.METHOD_NAME.equals(method)) {
-            if (MapUtils.isEmpty(params)) {
-                params = new HashMap<>();
-            }
             return doGet(url, headers, params);
         }
         if (HttpPut.METHOD_NAME.equals(method)) {
