@@ -193,6 +193,17 @@ Whether to set the paging parameters to params.
 When set to true,`<pageing>` is set to `<params>`.
 When set to false,When the page field exists in `<body>` or `<params>`, replace value.
 
+When set to false,config example:
+```hocon
+body="""{"id":1,"pageIndex":"${pageIndex}"}"""
+```
+
+```hocon
+params={
+ page: "${page}"
+}
+```
+
 ### params
 By default, the parameters will be added to the url path.
 If you need to keep the old version behavior, please check keep_params_as_form.
