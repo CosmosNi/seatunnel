@@ -195,7 +195,7 @@ When set to false,When the page field exists in `<body>` or `<params>`, replace 
 
 When set to false,config example:
 ```hocon
-body="""{"id":1,"pageIndex":"${pageIndex}"}"""
+body="""{"id":1,"page":"${page}"}"""
 ```
 
 ```hocon
