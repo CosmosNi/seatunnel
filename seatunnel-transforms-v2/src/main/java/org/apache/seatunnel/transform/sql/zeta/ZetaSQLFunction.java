@@ -504,10 +504,6 @@ public class ZetaSQLFunction {
             case TRUNC:
             case TRUNCATE:
                 return NumericFunction.trunc(args);
-            case ARRAY_MAX:
-                return NumericFunction.max(args);
-            case ARRAY_MIN:
-                return NumericFunction.min(args);
             case NOW:
                 return DateTimeFunction.currentTimestamp();
             case DATEADD:
@@ -560,6 +556,10 @@ public class ZetaSQLFunction {
                 return SystemFunction.nullif(args);
             case ARRAY:
                 return ArrayFunction.array(args);
+            case ARRAY_MAX:
+                return ArrayFunction.arrayMax(args);
+            case ARRAY_MIN:
+                return ArrayFunction.arrayMin(args);
             case UUID:
                 return randomUUID().toString();
             default:
