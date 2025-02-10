@@ -38,6 +38,12 @@ public class HttpConfig {
                     .booleanType()
                     .defaultValue(false)
                     .withDescription("Keep param as form");
+    public static final Option<Boolean> KEEP_PAGE_PARAM_AS_HTTP_PARAM =
+            Options.key("keep_page_param_as_http_param")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription("keep page param as http param");
+
     public static final Option<Long> TOTAL_PAGE_SIZE =
             Options.key("total_page_size")
                     .longType()

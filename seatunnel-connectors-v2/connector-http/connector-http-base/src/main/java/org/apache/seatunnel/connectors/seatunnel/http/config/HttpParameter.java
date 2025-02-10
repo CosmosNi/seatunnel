@@ -35,6 +35,7 @@ public class HttpParameter implements Serializable {
     protected Map<String, String> params;
     protected Map<String, Object> pageParams;
     protected boolean keepParamsAsForm = false;
+    protected boolean keepPageParamAsHttpParam = false;
     protected Map<String, Object> body;
     protected int pollIntervalMillis;
     protected int retry;
@@ -50,7 +51,10 @@ public class HttpParameter implements Serializable {
         if (pluginConfig.hasPath(HttpConfig.KEEP_PARAMS_AS_FORM.key())) {
             this.setKeepParamsAsForm(pluginConfig.getBoolean(HttpConfig.KEEP_PARAMS_AS_FORM.key()));
         }
-
+        if (pluginConfig.hasPath(HttpConfig.KEEP_PAGE_PARAM_AS_HTTP_PARAM.key())) {
+            this.setKeepPageParamAsHttpParam(
+                    pluginConfig.getBoolean(HttpConfig.KEEP_PAGE_PARAM_AS_HTTP_PARAM.key()));
+        }
         // set method
         if (pluginConfig.hasPath(HttpConfig.METHOD.key())) {
             HttpRequestMethod httpRequestMethod =
