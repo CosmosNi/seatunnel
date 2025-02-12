@@ -448,7 +448,7 @@ public class HttpClientProvider implements AutoCloseable {
 
     private void addBody(HttpEntityEnclosingRequestBase request, Map<String, Object> body)
             throws UnsupportedEncodingException {
-        if (MapUtils.isNotEmpty(body)) {
+        if (MapUtils.isEmpty(body)) {
             body = new HashMap<>();
         }
         boolean isFormSubmit =
