@@ -32,6 +32,7 @@
 
     <properties>
         <hadoop-aliyun.version>3.4.1</hadoop-aliyun.version>
+        <json-smart.version>2.3</json-smart.version>
     </properties>
 
     <dependencies>
@@ -47,6 +48,17 @@
             <artifactId>hadoop-aliyun</artifactId>
             <version>${hadoop-aliyun.version}</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.minidev</groupId>
+                    <artifactId>json-smart</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>net.minidev</groupId>
+            <artifactId>json-smart</artifactId>
+            <version>${json-smart.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
