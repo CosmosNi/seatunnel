@@ -40,7 +40,6 @@ import org.apache.seatunnel.connectors.seatunnel.myhours.source.exception.MyHour
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 
@@ -91,7 +90,7 @@ public class MyHoursSource extends HttpSource {
         try {
             HttpResponse response =
                     loginHttpClient.doPost(
-                            URI.create(myHoursLoginParameter.getUrl()),
+                            myHoursLoginParameter.getUrl(),
                             Collections.emptyMap(),
                             Collections.emptyMap(),
                             myHoursLoginParameter.getBody());
