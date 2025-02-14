@@ -28,6 +28,8 @@ import org.apache.seatunnel.api.table.catalog.TableSchema;
 import org.apache.seatunnel.api.table.catalog.schema.ReadonlyConfigParser;
 import org.apache.seatunnel.api.table.catalog.schema.TableSchemaOptions;
 import org.apache.seatunnel.api.table.type.BasicType;
+import org.apache.seatunnel.api.table.type.MapType;
+import org.apache.seatunnel.api.table.type.PrimitiveByteArrayType;
 import org.apache.seatunnel.api.table.type.SeaTunnelDataType;
 import org.apache.seatunnel.api.table.type.SeaTunnelRow;
 import org.apache.seatunnel.api.table.type.SeaTunnelRowType;
@@ -38,6 +40,7 @@ import org.apache.seatunnel.connectors.seatunnel.kafka.config.StartMode;
 import org.apache.seatunnel.format.avro.AvroDeserializationSchema;
 import org.apache.seatunnel.format.compatible.kafka.connect.json.CompatibleKafkaConnectDeserializationSchema;
 import org.apache.seatunnel.format.compatible.kafka.connect.json.KafkaConnectJsonFormatOptions;
+import org.apache.seatunnel.format.compatible.kafka.connect.json.NativeKafkaConnectDeserializationSchema;
 import org.apache.seatunnel.format.json.JsonDeserializationSchema;
 import org.apache.seatunnel.format.json.canal.CanalJsonDeserializationSchema;
 import org.apache.seatunnel.format.json.debezium.DebeziumJsonDeserializationSchema;
@@ -64,6 +67,14 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.HEADERS;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.KEY;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.OFFSET;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.PARTITION;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.TIMESTAMP;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.TIMESTAMP_TYPE;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.VALUE;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseOptions.IS_NATIVE;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSourceOptions.BOOTSTRAP_SERVERS;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSourceOptions.COMMIT_ON_CHECKPOINT;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSourceOptions.CONSUMER_GROUP;
@@ -145,6 +156,7 @@ public class KafkaSourceConfig implements Serializable {
         ConsumerMetadata consumerMetadata = new ConsumerMetadata();
         consumerMetadata.setTopic(readonlyConfig.get(TOPIC));
         consumerMetadata.setPattern(readonlyConfig.get(PATTERN));
+        consumerMetadata.setNative(readonlyConfig.get(IS_NATIVE));
         consumerMetadata.setProperties(new Properties());
         // Create a catalog
         CatalogTable catalogTable = createCatalogTable(readonlyConfig);
@@ -210,7 +222,53 @@ public class KafkaSourceConfig implements Serializable {
                 readonlyConfig.getOptional(TableSchemaOptions.SCHEMA);
         TablePath tablePath = TablePath.of(null, readonlyConfig.get(TOPIC));
         TableSchema tableSchema;
-        if (schemaOptions.isPresent()) {
+        if (readonlyConfig.get(IS_NATIVE)) {
+            tableSchema =
+                    TableSchema.builder()
+                            .column(
+                                    PhysicalColumn.of(
+                                            HEADERS,
+                                            new MapType<>(
+                                                    BasicType.STRING_TYPE, BasicType.STRING_TYPE),
+                                            0,
+                                            false,
+                                            null,
+                                            null))
+                            .column(
+                                    PhysicalColumn.of(
+                                            KEY,
+                                            PrimitiveByteArrayType.INSTANCE,
+                                            0,
+                                            false,
+                                            null,
+                                            null))
+                            .column(
+                                    PhysicalColumn.of(
+                                            OFFSET, BasicType.LONG_TYPE, 0, false, null, null))
+                            .column(
+                                    PhysicalColumn.of(
+                                            PARTITION, BasicType.INT_TYPE, 0, false, null, null))
+                            .column(
+                                    PhysicalColumn.of(
+                                            TIMESTAMP, BasicType.LONG_TYPE, 0, false, null, null))
+                            .column(
+                                    PhysicalColumn.of(
+                                            TIMESTAMP_TYPE,
+                                            BasicType.STRING_TYPE,
+                                            0,
+                                            false,
+                                            null,
+                                            null))
+                            .column(
+                                    PhysicalColumn.of(
+                                            VALUE,
+                                            PrimitiveByteArrayType.INSTANCE,
+                                            0,
+                                            false,
+                                            null,
+                                            null))
+                            .build();
+        } else if (schemaOptions.isPresent()) {
             tableSchema = new ReadonlyConfigParser().parse(readonlyConfig);
         } else {
             tableSchema =
@@ -249,6 +307,11 @@ public class KafkaSourceConfig implements Serializable {
             CatalogTable catalogTable, ReadonlyConfig readonlyConfig) {
         SeaTunnelRowType seaTunnelRowType = catalogTable.getSeaTunnelRowType();
         MessageFormat format = readonlyConfig.get(FORMAT);
+
+        if (readonlyConfig.get(IS_NATIVE)) {
+            return new NativeKafkaConnectDeserializationSchema(
+                    catalogTable, false, false, false, false);
+        }
 
         if (!readonlyConfig.getOptional(TableSchemaOptions.SCHEMA).isPresent()) {
             return TextDeserializationSchema.builder()

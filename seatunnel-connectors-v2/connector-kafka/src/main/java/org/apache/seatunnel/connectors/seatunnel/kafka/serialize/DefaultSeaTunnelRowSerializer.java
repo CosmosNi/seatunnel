@@ -37,17 +37,27 @@ import org.apache.seatunnel.format.json.ogg.OggJsonSerializationSchema;
 import org.apache.seatunnel.format.protobuf.ProtobufSerializationSchema;
 import org.apache.seatunnel.format.text.TextSerializationSchema;
 
+import org.apache.commons.collections4.MapUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 
 import lombok.RequiredArgsConstructor;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.HEADERS;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.KEY;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.PARTITION;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.TIMESTAMP;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.VALUE;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseOptions.PROTOBUF_MESSAGE_NAME;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseOptions.PROTOBUF_SCHEMA;
 
@@ -69,6 +79,37 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
                 keyExtractor.apply(row),
                 valueExtractor.apply(row),
                 headersExtractor.apply(row));
+    }
+
+    @Override
+    public ProducerRecord serializeNativeRow(SeaTunnelRow row, SeaTunnelRowType seaTunnelRowType) {
+        Iterable<Header> headers = headersExtractor.apply(row);
+        if (row.getField(seaTunnelRowType.indexOf(HEADERS)) != null) {
+            headers =
+                    convertToKafkaHeaders(
+                            (Map<String, String>) row.getField(seaTunnelRowType.indexOf(HEADERS)));
+        }
+
+        return new ProducerRecord(
+                topicExtractor.apply(row),
+                (Integer) row.getField(seaTunnelRowType.indexOf(PARTITION)),
+                (Long) row.getField(seaTunnelRowType.indexOf(TIMESTAMP)),
+                row.getField(seaTunnelRowType.indexOf(KEY)),
+                row.getField(seaTunnelRowType.indexOf(VALUE)),
+                headers);
+    }
+
+    private Iterable<Header> convertToKafkaHeaders(Map<String, String> headersMap) {
+        if (MapUtils.isEmpty(headersMap)) {
+            return null;
+        }
+        RecordHeaders kafkaHeaders = new RecordHeaders();
+        for (Map.Entry<String, String> entry : headersMap.entrySet()) {
+            kafkaHeaders.add(
+                    new RecordHeader(
+                            entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8)));
+        }
+        return kafkaHeaders;
     }
 
     public static DefaultSeaTunnelRowSerializer create(

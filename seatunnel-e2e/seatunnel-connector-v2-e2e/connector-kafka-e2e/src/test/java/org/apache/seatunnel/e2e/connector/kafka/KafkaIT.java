@@ -175,6 +175,35 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
     }
 
     @TestTemplate
+    public void testNativeSinkKafka(TestContainer container)
+            throws IOException, InterruptedException {
+        Container.ExecResult execResult = container.executeJob("/kafka_sink_fake_to_kafka.conf");
+        Assertions.assertEquals(0, execResult.getExitCode(), execResult.getStderr());
+
+        String topicName = "test_topic";
+        String topicNativeName = "test_topic_native";
+        List<ConsumerRecord<String, String>> data = getKafkaRecordData(topicName);
+
+        Container.ExecResult execResultNative = container.executeJob("/kafka_native_to_kafka.conf");
+        Assertions.assertEquals(0, execResultNative.getExitCode(), execResultNative.getStderr());
+
+        List<ConsumerRecord<String, String>> dataNative = getKafkaRecordData(topicNativeName);
+
+        Assertions.assertEquals(dataNative.size(), data.size());
+
+        for (int i = 0; i < data.size(); i++) {
+            ConsumerRecord<String, String> oldRecord = data.get(i);
+            ConsumerRecord<String, String> newRecord = data.get(i);
+            Assertions.assertEquals(oldRecord.key(), newRecord.key());
+            Assertions.assertEquals(oldRecord.headers(), newRecord.headers());
+            Assertions.assertEquals(oldRecord.partition(), newRecord.partition());
+            Assertions.assertEquals(oldRecord.timestamp(), newRecord.timestamp());
+            Assertions.assertEquals(oldRecord.timestamp(), newRecord.timestamp());
+            Assertions.assertEquals(oldRecord.value(), newRecord.value());
+        }
+    }
+
+    @TestTemplate
     public void testTextFormatSinkKafka(TestContainer container)
             throws IOException, InterruptedException {
         Container.ExecResult execResult =
@@ -1152,6 +1181,28 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
                 for (ConsumerRecord<String, String> record : records) {
                     if (lastProcessedOffset < record.offset()) {
                         data.put(record.key(), record.value());
+                    }
+                    lastProcessedOffset = record.offset();
+                }
+            } while (lastProcessedOffset < endOffset - 1);
+        }
+        return data;
+    }
+
+    private List<ConsumerRecord<String, String>> getKafkaRecordData(String topicName) {
+        List<ConsumerRecord<String, String>> data = new ArrayList<>();
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaConsumerConfig())) {
+            consumer.subscribe(Arrays.asList(topicName));
+            Map<TopicPartition, Long> offsets =
+                    consumer.endOffsets(Arrays.asList(new TopicPartition(topicName, 0)));
+            Long endOffset = offsets.entrySet().iterator().next().getValue();
+            Long lastProcessedOffset = -1L;
+
+            do {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<String, String> record : records) {
+                    if (lastProcessedOffset < record.offset()) {
+                        data.add(record);
                     }
                     lastProcessedOffset = record.offset();
                 }

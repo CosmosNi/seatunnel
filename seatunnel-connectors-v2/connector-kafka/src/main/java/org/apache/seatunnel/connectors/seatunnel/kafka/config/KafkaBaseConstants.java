@@ -15,28 +15,15 @@
  * limitations under the License.
  */
 
-package org.apache.seatunnel.connectors.seatunnel.kafka.serialize;
+package org.apache.seatunnel.connectors.seatunnel.kafka.config;
 
-import org.apache.seatunnel.api.table.type.SeaTunnelRow;
-import org.apache.seatunnel.api.table.type.SeaTunnelRowType;
+public class KafkaBaseConstants {
 
-import org.apache.kafka.clients.producer.ProducerRecord;
-
-public interface SeaTunnelRowSerializer<K, V> {
-
-    /**
-     * Serialize the {@link SeaTunnelRow} to a Kafka {@link ProducerRecord}.
-     *
-     * @param row seatunnel row
-     * @return kafka record.
-     */
-    ProducerRecord<K, V> serializeRow(SeaTunnelRow row);
-
-    /**
-     * Serialize the {@link SeaTunnelRow} to a Kafka {@link ProducerRecord}.
-     *
-     * @param row seatunnel row
-     * @return kafka record.
-     */
-    ProducerRecord<K, V> serializeNativeRow(SeaTunnelRow row, SeaTunnelRowType seaTunnelRowType);
+    public static final String HEADERS = "headers";
+    public static final String KEY = "key";
+    public static final String OFFSET = "offset";
+    public static final String PARTITION = "partition";
+    public static final String TIMESTAMP = "timestamp";
+    public static final String TIMESTAMP_TYPE = "timestampType";
+    public static final String VALUE = "value";
 }

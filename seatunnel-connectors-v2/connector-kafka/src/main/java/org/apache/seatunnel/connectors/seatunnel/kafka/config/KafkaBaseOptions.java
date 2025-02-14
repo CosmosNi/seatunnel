@@ -37,6 +37,12 @@ public class KafkaBaseOptions {
                                     + "the user can also specify multiple non-mandatory parameters for the producer or consumer client, "
                                     + "covering all the producer parameters specified in the official Kafka document.");
 
+    public static final Option<Boolean> IS_NATIVE =
+            Options.key("is_native")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription("support native format read/write kafka record");
+
     public static final Option<String> TOPIC =
             Options.key("topic")
                     .stringType()

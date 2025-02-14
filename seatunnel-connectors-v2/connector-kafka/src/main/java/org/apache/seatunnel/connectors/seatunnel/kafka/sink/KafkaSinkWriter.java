@@ -48,6 +48,7 @@ import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOp
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.DEFAULT_FIELD_DELIMITER;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.FIELD_DELIMITER;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.FORMAT;
+import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.IS_NATIVE;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.KAFKA_CONFIG;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.PARTITION;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.PARTITION_KEY_FIELDS;
@@ -69,6 +70,8 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
 
     private static final int PREFIX_RANGE = 10000;
 
+    private final boolean isNative;
+
     public KafkaSinkWriter(
             SinkWriter.Context context,
             SeaTunnelRowType seaTunnelRowType,
@@ -80,6 +83,7 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
                 && !CollectionUtils.isEmpty(pluginConfig.get(ASSIGN_PARTITIONS))) {
             MessageContentPartitioner.setAssignPartitions(pluginConfig.get(ASSIGN_PARTITIONS));
         }
+        isNative = pluginConfig.get(IS_NATIVE) != null && pluginConfig.get(IS_NATIVE);
 
         if (pluginConfig.get(TRANSACTION_PREFIX) != null) {
             this.transactionPrefix = pluginConfig.get(TRANSACTION_PREFIX);
@@ -110,8 +114,12 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
 
     @Override
     public void write(SeaTunnelRow element) {
-        ProducerRecord<byte[], byte[]> producerRecord =
-                seaTunnelRowSerializer.serializeRow(element);
+        ProducerRecord<byte[], byte[]> producerRecord;
+        if (isNative) {
+            producerRecord = seaTunnelRowSerializer.serializeNativeRow(element, seaTunnelRowType);
+        } else {
+            producerRecord = seaTunnelRowSerializer.serializeRow(element);
+        }
         kafkaProducerSender.send(producerRecord);
     }
 
