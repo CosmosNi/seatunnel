@@ -45,6 +45,7 @@ They can be downloaded via install-plugin.sh or from the Maven central repositor
 | common-options        |        | No       | -       | Source plugin common parameters, please refer to [Source Common Options](../sink-common-options.md) for details                                                                                                                                                                                                                                                                                                                                     |
 | protobuf_message_name | String | No       | -       | Effective when the format is set to protobuf, specifies the Message name                                                                                                                                                                                                                                                                                                                                                                            |
 | protobuf_schema       | String | No       | -       | Effective when the format is set to protobuf, specifies the Schema definition                                                                                                                                                                                                                                                                                                                                                                       |
+| is_native             | Boolean| No       | false    | Supports retaining the source information of the record                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 
 ## Parameter Interpretation
@@ -266,6 +267,21 @@ sink {
                 repeated string phone_numbers = 10;
               }
               """
+  }
+}
+```
+
+### is_native
+Supports retaining the source information of the record,such as partition,timestamp.
+
+example:
+```hocon
+sink {
+  kafka {
+      is_native = true
+      topic = "test_topic_native"
+      bootstrap.servers = "kafkaCluster:9092"
+      format = json
   }
 }
 ```

@@ -54,6 +54,7 @@
 | common-options                      |                                     | 否    | -                        | 源插件的常见参数，详情请参考 [Source Common Options](../source-common-options.md)。                                                                                                                                                                                                                                                    |
 | protobuf_message_name               | String                              | 否    | -                        | 当格式设置为 protobuf 时有效，指定消息名称。                                                                                                                                                                                                                                                                                             |
 | protobuf_schema                     | String                              | 否    | -                        | 当格式设置为 protobuf 时有效，指定 Schema 定义。                                                                                                                                                                                                                                                                                       |
+| is_native                           | Boolean                                                                    | No       | false                    | 支持保留record的源信息。                                                                                                                                                                                                                                                                                                         |
 
 ### debezium_record_table_filter
 
@@ -358,6 +359,29 @@ source {
     bootstrap.servers = "kafkaCluster:9092"
     start_mode = "earliest"
     plugin_output = "kafka_table"
+  }
+}
+```
+
+### is_native
+支持保留record的源信息,比如 partition、timestamp.
+
+事例:
+```hocon
+source {
+  Kafka {
+    is_native = true
+    topic = "test_topic"
+    bootstrap.servers = "kafkaCluster:9092"
+    kafka.config = {
+      client.id = client_1
+      max.poll.records = 500
+      auto.offset.reset = "earliest"
+      enable.auto.commit = "false"
+    }
+    format = "COMPATIBLE_KAFKA_CONNECT_JSON"
+    value_converter_schema_enabled = false
+    consumer.group = "native_format_to_kafka"
   }
 }
 ```

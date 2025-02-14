@@ -45,6 +45,7 @@
 | common-options       |        | 否    | -    | Sink插件常用参数，请参考 [Sink常用选项 ](../sink-common-options.md) 了解详情                                                                                                                                                                                                |
 |protobuf_message_name|String|否|-| format配置为protobuf时生效，取Message名称                                                                                                                                                                                                                           |
 |protobuf_schema|String|否|-| format配置为protobuf时生效取Schema名称                                                                                                                                                                                                                                      |
+| is_native                           | Boolean                                                                    | No       | false                    | 支持保留record的源信息。                                                                                                                                                                                                                                                                                                         |
 
 ## 参数解释
 
@@ -249,3 +250,17 @@ sink {
 }
 ```
 
+### is_native
+支持保留record的源信息,比如 partition、timestamp.
+
+事例:
+```hocon
+sink {
+  kafka {
+      is_native = true
+      topic = "test_topic_native"
+      bootstrap.servers = "kafkaCluster:9092"
+      format = json
+  }
+}
+```
