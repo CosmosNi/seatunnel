@@ -48,7 +48,6 @@ import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOp
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.DEFAULT_FIELD_DELIMITER;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.FIELD_DELIMITER;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.FORMAT;
-import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.IS_NATIVE;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.KAFKA_CONFIG;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.PARTITION;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSinkOptions.PARTITION_KEY_FIELDS;
@@ -83,7 +82,9 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
                 && !CollectionUtils.isEmpty(pluginConfig.get(ASSIGN_PARTITIONS))) {
             MessageContentPartitioner.setAssignPartitions(pluginConfig.get(ASSIGN_PARTITIONS));
         }
-        isNative = pluginConfig.get(IS_NATIVE) != null && pluginConfig.get(IS_NATIVE);
+
+        MessageFormat format = pluginConfig.get(FORMAT);
+        isNative = format == MessageFormat.NATIVE ? true : false;
 
         if (pluginConfig.get(TRANSACTION_PREFIX) != null) {
             this.transactionPrefix = pluginConfig.get(TRANSACTION_PREFIX);

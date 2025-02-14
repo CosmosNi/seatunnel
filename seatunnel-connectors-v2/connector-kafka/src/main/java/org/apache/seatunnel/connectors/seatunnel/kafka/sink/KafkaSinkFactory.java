@@ -44,8 +44,7 @@ public class KafkaSinkFactory implements TableSinkFactory {
                         KafkaSinkOptions.TRANSACTION_PREFIX,
                         KafkaSinkOptions.SEMANTICS,
                         KafkaSinkOptions.PARTITION,
-                        KafkaSinkOptions.PARTITION_KEY_FIELDS,
-                        KafkaSinkOptions.IS_NATIVE)
+                        KafkaSinkOptions.PARTITION_KEY_FIELDS)
                 .build();
     }
 

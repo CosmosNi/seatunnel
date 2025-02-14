@@ -42,5 +42,4 @@ public class ConsumerMetadata implements Serializable {
     private Long startOffsetsTimestamp;
     private DeserializationSchema<SeaTunnelRow> deserializationSchema;
     private CatalogTable catalogTable;
-    private boolean isNative = false;
 }

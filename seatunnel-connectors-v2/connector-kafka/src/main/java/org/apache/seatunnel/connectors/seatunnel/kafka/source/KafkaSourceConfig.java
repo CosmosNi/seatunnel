@@ -74,7 +74,6 @@ import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseCo
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.TIMESTAMP;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.TIMESTAMP_TYPE;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseConstants.VALUE;
-import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaBaseOptions.IS_NATIVE;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSourceOptions.BOOTSTRAP_SERVERS;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSourceOptions.COMMIT_ON_CHECKPOINT;
 import static org.apache.seatunnel.connectors.seatunnel.kafka.config.KafkaSourceOptions.CONSUMER_GROUP;
@@ -156,7 +155,6 @@ public class KafkaSourceConfig implements Serializable {
         ConsumerMetadata consumerMetadata = new ConsumerMetadata();
         consumerMetadata.setTopic(readonlyConfig.get(TOPIC));
         consumerMetadata.setPattern(readonlyConfig.get(PATTERN));
-        consumerMetadata.setNative(readonlyConfig.get(IS_NATIVE));
         consumerMetadata.setProperties(new Properties());
         // Create a catalog
         CatalogTable catalogTable = createCatalogTable(readonlyConfig);
@@ -222,7 +220,9 @@ public class KafkaSourceConfig implements Serializable {
                 readonlyConfig.getOptional(TableSchemaOptions.SCHEMA);
         TablePath tablePath = TablePath.of(null, readonlyConfig.get(TOPIC));
         TableSchema tableSchema;
-        if (readonlyConfig.get(IS_NATIVE)) {
+        MessageFormat format = readonlyConfig.get(FORMAT);
+
+        if (format == MessageFormat.NATIVE) {
             tableSchema =
                     TableSchema.builder()
                             .column(
@@ -308,7 +308,7 @@ public class KafkaSourceConfig implements Serializable {
         SeaTunnelRowType seaTunnelRowType = catalogTable.getSeaTunnelRowType();
         MessageFormat format = readonlyConfig.get(FORMAT);
 
-        if (readonlyConfig.get(IS_NATIVE)) {
+        if (format == MessageFormat.NATIVE) {
             return new NativeKafkaConnectDeserializationSchema(
                     catalogTable, false, false, false, false);
         }

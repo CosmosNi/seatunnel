@@ -275,6 +275,7 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
             ReadonlyConfig pluginConfig) {
         switch (format) {
             case JSON:
+            case NATIVE:
                 return new JsonSerializationSchema(rowType);
             case TEXT:
                 return TextSerializationSchema.builder()

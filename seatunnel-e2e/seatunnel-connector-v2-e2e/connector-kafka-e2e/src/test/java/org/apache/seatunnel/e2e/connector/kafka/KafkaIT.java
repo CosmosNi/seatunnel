@@ -193,7 +193,7 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
 
         for (int i = 0; i < data.size(); i++) {
             ConsumerRecord<String, String> oldRecord = data.get(i);
-            ConsumerRecord<String, String> newRecord = data.get(i);
+            ConsumerRecord<String, String> newRecord = dataNative.get(i);
             Assertions.assertEquals(oldRecord.key(), newRecord.key());
             Assertions.assertEquals(oldRecord.headers(), newRecord.headers());
             Assertions.assertEquals(oldRecord.partition(), newRecord.partition());
