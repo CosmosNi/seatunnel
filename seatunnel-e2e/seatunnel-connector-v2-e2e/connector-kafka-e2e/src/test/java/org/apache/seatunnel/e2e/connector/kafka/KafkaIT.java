@@ -177,10 +177,11 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
     @TestTemplate
     public void testNativeSinkKafka(TestContainer container)
             throws IOException, InterruptedException {
-        Container.ExecResult execResult = container.executeJob("/kafka_sink_fake_to_kafka.conf");
+        Container.ExecResult execResult =
+                container.executeJob("/kafka_native_sink_fake_to_kafka.conf");
         Assertions.assertEquals(0, execResult.getExitCode(), execResult.getStderr());
 
-        String topicName = "test_topic";
+        String topicName = "test_topic_1";
         String topicNativeName = "test_topic_native";
         List<ConsumerRecord<String, String>> data = getKafkaRecordData(topicName);
 
