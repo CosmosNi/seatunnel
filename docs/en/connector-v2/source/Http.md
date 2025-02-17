@@ -68,7 +68,7 @@ They can be downloaded via install-plugin.sh or from the Maven central repositor
 | socket_timeout_ms           | Int     | No       | 60000   | Socket timeout setting, default 60s.                                                                                                                                              |
 | common-options              |         | No       | -       | Source plugin common parameters, please refer to [Source Common Options](../source-common-options.md) for details                                                                 |
 | keep_params_as_form         |    Boolean     | No       | false       | Whether the params are submitted according to the form, used for compatibility with legacy behaviors. When true, the value of the params parameter is submitted through the form. |
-| keep_page_param_as_http_param         |    Boolean     | No       | false       | Whether to set the paging parameters to params.                                                                                                                                   |
+| keep_page_param_as_http_param         |    Boolean     | No       | false       | Whether to set the paging parameters to params. For compatibility with legacy behaviors.                                                                                                                                  |
 
 ## How to Create a Http Data Synchronization Jobs
 
@@ -186,7 +186,7 @@ connector will generate data as the following:
 ### keep_params_as_form
 For compatibility with old versions of http.
 When set to true,`<params>` and `<pageing>` will be submitted in the form.
-When set to false，`<params>` will be added to the url path,and `<pageing>` will be added to the body
+When set to false，`<params>` will be added to the url path,and `<pageing>` will not be added to the body or form. It will replace placeholders in params and body.
 
 ### keep_page_param_as_http_param
 Whether to set the paging parameters to params.
