@@ -1156,8 +1156,6 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
                 Header header2 =
                         new RecordHeader("header2", "value2".getBytes(StandardCharsets.UTF_8));
                 List<Header> headers = Arrays.asList(header1, header2);
-
-                // 创建 ProducerRecord
                 ProducerRecord<byte[], byte[]> record =
                         new ProducerRecord<>(topic, partition, timestamp, key, value, headers);
                 producer.send(record).get();
