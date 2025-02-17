@@ -180,10 +180,6 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
     }
 
     @TestTemplate
-    @DisabledOnContainer(
-            value = {},
-            type = {EngineType.FLINK},
-            disabledReason = "flink and spark won't commit offset when batch job finished")
     public void testNativeSinkKafka(TestContainer container)
             throws IOException, InterruptedException {
         String topicName = "test_topic_native_source";
