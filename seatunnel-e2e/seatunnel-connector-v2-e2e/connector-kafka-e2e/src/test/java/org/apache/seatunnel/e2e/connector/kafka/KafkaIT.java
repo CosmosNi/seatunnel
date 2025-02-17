@@ -175,14 +175,24 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
     }
 
     @TestTemplate
+    @DisabledOnContainer(
+            value = {},
+            type = {EngineType.FLINK},
+            disabledReason = "Currently SPARK do not support cdc")
     public void testNativeSinkKafka(TestContainer container)
             throws IOException, InterruptedException {
-        Container.ExecResult execResult =
-                container.executeJob("/kafka_native_sink_fake_to_kafka.conf");
-        Assertions.assertEquals(0, execResult.getExitCode(), execResult.getStderr());
+        String topicName = "test_topic_native_source";
+        String topicNativeName = "test_topic_native_sink";
 
-        String topicName = "test_topic_1";
-        String topicNativeName = "test_topic_native";
+        DefaultSeaTunnelRowSerializer serializer =
+                DefaultSeaTunnelRowSerializer.create(
+                        topicName,
+                        SEATUNNEL_ROW_TYPE,
+                        DEFAULT_FORMAT,
+                        DEFAULT_FIELD_DELIMITER,
+                        null);
+        generateTestData(serializer::serializeRow, 0, 100);
+
         List<ConsumerRecord<String, String>> data = getKafkaRecordData(topicName);
 
         Container.ExecResult execResultNative = container.executeJob("/kafka_native_to_kafka.conf");
