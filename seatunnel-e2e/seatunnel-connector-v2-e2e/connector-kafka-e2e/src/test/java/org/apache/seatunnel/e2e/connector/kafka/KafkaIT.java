@@ -175,23 +175,10 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
     }
 
     @TestTemplate
-    @DisabledOnContainer(
-            value = {},
-            type = {EngineType.FLINK},
-            disabledReason = "Currently SPARK do not support cdc")
     public void testNativeSinkKafka(TestContainer container)
             throws IOException, InterruptedException {
-        String topicName = "test_topic_native_source";
+        String topicName = "test_topic_source";
         String topicNativeName = "test_topic_native_sink";
-
-        DefaultSeaTunnelRowSerializer serializer =
-                DefaultSeaTunnelRowSerializer.create(
-                        topicName,
-                        SEATUNNEL_ROW_TYPE,
-                        DEFAULT_FORMAT,
-                        DEFAULT_FIELD_DELIMITER,
-                        null);
-        generateTestData(serializer::serializeRow, 0, 100);
 
         List<ConsumerRecord<String, String>> data = getKafkaRecordData(topicName);
 
