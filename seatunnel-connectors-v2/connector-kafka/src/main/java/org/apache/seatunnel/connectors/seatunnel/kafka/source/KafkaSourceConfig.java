@@ -224,51 +224,7 @@ public class KafkaSourceConfig implements Serializable {
         MessageFormat format = readonlyConfig.get(FORMAT);
 
         if (format == MessageFormat.NATIVE) {
-            tableSchema =
-                    TableSchema.builder()
-                            .column(
-                                    PhysicalColumn.of(
-                                            HEADERS,
-                                            new MapType<>(
-                                                    BasicType.STRING_TYPE, BasicType.STRING_TYPE),
-                                            0,
-                                            false,
-                                            null,
-                                            null))
-                            .column(
-                                    PhysicalColumn.of(
-                                            KEY,
-                                            PrimitiveByteArrayType.INSTANCE,
-                                            0,
-                                            false,
-                                            null,
-                                            null))
-                            .column(
-                                    PhysicalColumn.of(
-                                            OFFSET, BasicType.LONG_TYPE, 0, false, null, null))
-                            .column(
-                                    PhysicalColumn.of(
-                                            PARTITION, BasicType.INT_TYPE, 0, false, null, null))
-                            .column(
-                                    PhysicalColumn.of(
-                                            TIMESTAMP, BasicType.LONG_TYPE, 0, false, null, null))
-                            .column(
-                                    PhysicalColumn.of(
-                                            TIMESTAMP_TYPE,
-                                            BasicType.STRING_TYPE,
-                                            0,
-                                            false,
-                                            null,
-                                            null))
-                            .column(
-                                    PhysicalColumn.of(
-                                            VALUE,
-                                            PrimitiveByteArrayType.INSTANCE,
-                                            0,
-                                            false,
-                                            null,
-                                            null))
-                            .build();
+            tableSchema = nativeTableSchema();
         } else if (schemaOptions.isPresent()) {
             tableSchema = new ReadonlyConfigParser().parse(readonlyConfig);
         } else {
@@ -388,5 +344,30 @@ public class KafkaSourceConfig implements Serializable {
                         CommonErrorCodeDeprecated.UNSUPPORTED_DATA_TYPE,
                         "Unsupported format: " + format);
         }
+    }
+
+    private TableSchema nativeTableSchema() {
+        return TableSchema.builder()
+                .column(
+                        PhysicalColumn.of(
+                                HEADERS,
+                                new MapType<>(BasicType.STRING_TYPE, BasicType.STRING_TYPE),
+                                0,
+                                false,
+                                null,
+                                null))
+                .column(
+                        PhysicalColumn.of(
+                                KEY, PrimitiveByteArrayType.INSTANCE, 0, false, null, null))
+                .column(PhysicalColumn.of(OFFSET, BasicType.LONG_TYPE, 0, false, null, null))
+                .column(PhysicalColumn.of(PARTITION, BasicType.INT_TYPE, 0, false, null, null))
+                .column(PhysicalColumn.of(TIMESTAMP, BasicType.LONG_TYPE, 0, false, null, null))
+                .column(
+                        PhysicalColumn.of(
+                                TIMESTAMP_TYPE, BasicType.STRING_TYPE, 0, false, null, null))
+                .column(
+                        PhysicalColumn.of(
+                                VALUE, PrimitiveByteArrayType.INSTANCE, 0, false, null, null))
+                .build();
     }
 }

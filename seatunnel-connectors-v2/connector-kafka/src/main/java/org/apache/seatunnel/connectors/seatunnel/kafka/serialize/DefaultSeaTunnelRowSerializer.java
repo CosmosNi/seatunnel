@@ -81,35 +81,15 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
                 headersExtractor.apply(row));
     }
 
-    @Override
-    public ProducerRecord serializeNativeRow(SeaTunnelRow row, SeaTunnelRowType seaTunnelRowType) {
-        Iterable<Header> headers = headersExtractor.apply(row);
-        if (row.getField(seaTunnelRowType.indexOf(HEADERS)) != null) {
-            headers =
-                    convertToKafkaHeaders(
-                            (Map<String, String>) row.getField(seaTunnelRowType.indexOf(HEADERS)));
-        }
-
-        return new ProducerRecord(
-                topicExtractor.apply(row),
-                (Integer) row.getField(seaTunnelRowType.indexOf(PARTITION)),
-                (Long) row.getField(seaTunnelRowType.indexOf(TIMESTAMP)),
-                row.getField(seaTunnelRowType.indexOf(KEY)),
-                row.getField(seaTunnelRowType.indexOf(VALUE)),
-                headers);
-    }
-
-    private Iterable<Header> convertToKafkaHeaders(Map<String, String> headersMap) {
-        if (MapUtils.isEmpty(headersMap)) {
-            return null;
-        }
-        RecordHeaders kafkaHeaders = new RecordHeaders();
-        for (Map.Entry<String, String> entry : headersMap.entrySet()) {
-            kafkaHeaders.add(
-                    new RecordHeader(
-                            entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8)));
-        }
-        return kafkaHeaders;
+    public static DefaultSeaTunnelRowSerializer create(
+            String topic, MessageFormat format, SeaTunnelRowType rowType) {
+        return new DefaultSeaTunnelRowSerializer(
+                topicExtractor(topic, rowType, format),
+                partitionNativeExtractor(rowType),
+                timestampExtractor(rowType),
+                keyExtractor(rowType),
+                valueExtractor(rowType),
+                headersExtractor(rowType));
     }
 
     public static DefaultSeaTunnelRowSerializer create(
@@ -159,6 +139,11 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
                 headersExtractor());
     }
 
+    private static Function<SeaTunnelRow, Integer> partitionNativeExtractor(
+            SeaTunnelRowType rowType) {
+        return row -> (Integer) row.getField(rowType.indexOf(PARTITION));
+    }
+
     private static Function<SeaTunnelRow, Integer> partitionExtractor(Integer partition) {
         return row -> partition;
     }
@@ -167,13 +152,26 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
         return row -> null;
     }
 
+    private static Function<SeaTunnelRow, Long> timestampExtractor(SeaTunnelRowType rowType) {
+        return row -> (Long) row.getField(rowType.indexOf(TIMESTAMP));
+    }
+
     private static Function<SeaTunnelRow, Iterable<Header>> headersExtractor() {
         return row -> null;
     }
 
+    private static Function<SeaTunnelRow, Iterable<Header>> headersExtractor(
+            SeaTunnelRowType rowType) {
+
+        return row ->
+                convertToKafkaHeaders((Map<String, String>) row.getField(rowType.indexOf(HEADERS)));
+    }
+
     private static Function<SeaTunnelRow, String> topicExtractor(
             String topic, SeaTunnelRowType rowType, MessageFormat format) {
-        if (MessageFormat.COMPATIBLE_DEBEZIUM_JSON.equals(format) && topic == null) {
+        if ((MessageFormat.COMPATIBLE_DEBEZIUM_JSON.equals(format)
+                        || MessageFormat.NATIVE.equals(format))
+                && topic == null) {
             int topicFieldIndex =
                     rowType.indexOf(CompatibleDebeziumJsonDeserializationSchema.FIELD_TOPIC);
             return row -> row.getField(topicFieldIndex).toString();
@@ -229,6 +227,10 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
         return row -> serializationSchema.serialize(keyRowExtractor.apply(row));
     }
 
+    private static Function<SeaTunnelRow, byte[]> keyExtractor(SeaTunnelRowType rowType) {
+        return row -> (byte[]) row.getField(rowType.indexOf(KEY));
+    }
+
     private static Function<SeaTunnelRow, byte[]> valueExtractor(
             SeaTunnelRowType rowType,
             MessageFormat format,
@@ -237,6 +239,10 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
         SerializationSchema serializationSchema =
                 createSerializationSchema(rowType, format, delimiter, false, pluginConfig);
         return row -> serializationSchema.serialize(row);
+    }
+
+    private static Function<SeaTunnelRow, byte[]> valueExtractor(SeaTunnelRowType rowType) {
+        return row -> (byte[]) row.getField(rowType.indexOf(VALUE));
     }
 
     private static SeaTunnelRowType createKeyType(
@@ -304,5 +310,18 @@ public class DefaultSeaTunnelRowSerializer implements SeaTunnelRowSerializer {
                         CommonErrorCodeDeprecated.UNSUPPORTED_DATA_TYPE,
                         "Unsupported format: " + format);
         }
+    }
+
+    private static Iterable<Header> convertToKafkaHeaders(Map<String, String> headersMap) {
+        if (MapUtils.isEmpty(headersMap)) {
+            return null;
+        }
+        RecordHeaders kafkaHeaders = new RecordHeaders();
+        for (Map.Entry<String, String> entry : headersMap.entrySet()) {
+            kafkaHeaders.add(
+                    new RecordHeader(
+                            entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8)));
+        }
+        return kafkaHeaders;
     }
 }

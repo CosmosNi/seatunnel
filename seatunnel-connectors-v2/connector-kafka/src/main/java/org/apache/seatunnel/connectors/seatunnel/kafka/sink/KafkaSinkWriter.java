@@ -115,12 +115,8 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
 
     @Override
     public void write(SeaTunnelRow element) {
-        ProducerRecord<byte[], byte[]> producerRecord;
-        if (isNative) {
-            producerRecord = seaTunnelRowSerializer.serializeNativeRow(element, seaTunnelRowType);
-        } else {
-            producerRecord = seaTunnelRowSerializer.serializeRow(element);
-        }
+        ProducerRecord<byte[], byte[]> producerRecord =
+                seaTunnelRowSerializer.serializeRow(element);
         kafkaProducerSender.send(producerRecord);
     }
 
@@ -179,18 +175,22 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
     private SeaTunnelRowSerializer<byte[], byte[]> getSerializer(
             ReadonlyConfig pluginConfig, SeaTunnelRowType seaTunnelRowType) {
         MessageFormat messageFormat = pluginConfig.get(FORMAT);
+        String topic = pluginConfig.get(TOPIC);
+        if (MessageFormat.NATIVE.equals(messageFormat)) {
+            return DefaultSeaTunnelRowSerializer.create(topic, messageFormat, seaTunnelRowType);
+        }
+
         String delimiter = DEFAULT_FIELD_DELIMITER;
 
         if (pluginConfig.get(FIELD_DELIMITER) != null) {
             delimiter = pluginConfig.get(FIELD_DELIMITER);
         }
-
-        String topic = pluginConfig.get(TOPIC);
         if (pluginConfig.get(PARTITION_KEY_FIELDS) != null && pluginConfig.get(PARTITION) != null) {
             throw new KafkaConnectorException(
                     KafkaConnectorErrorCode.GET_TRANSACTIONMANAGER_FAILED,
                     "Cannot select both `partiton` and `partition_key_fields`. You can configure only one of them");
         }
+
         if (pluginConfig.get(PARTITION_KEY_FIELDS) != null) {
             return DefaultSeaTunnelRowSerializer.create(
                     topic,
