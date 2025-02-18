@@ -123,6 +123,8 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
 
     private KafkaContainer kafkaContainer;
 
+    private List<ConsumerRecord<String, String>> nativeData;
+
     @BeforeAll
     @Override
     public void startUp() throws Exception {
@@ -150,7 +152,9 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
                         DEFAULT_FIELD_DELIMITER,
                         null);
         generateTestData(serializer::serializeRow, 0, 100);
-        generateNativeTestData(0, 100);
+        String topicName = "test_topic_native_source";
+        generateNativeTestData("test_topic_native_source", 0, 100);
+        nativeData = getKafkaRecordData(topicName);
     }
 
     @AfterAll
@@ -182,20 +186,17 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
     @TestTemplate
     public void testNativeSinkKafka(TestContainer container)
             throws IOException, InterruptedException {
-        String topicName = "test_topic_native_source";
         String topicNativeName = "test_topic_native_sink";
-
-        List<ConsumerRecord<String, String>> data = getKafkaRecordData(topicName);
 
         Container.ExecResult execResultNative = container.executeJob("/kafka_native_to_kafka.conf");
         Assertions.assertEquals(0, execResultNative.getExitCode(), execResultNative.getStderr());
 
         List<ConsumerRecord<String, String>> dataNative = getKafkaRecordData(topicNativeName);
 
-        Assertions.assertEquals(dataNative.size(), data.size());
+        Assertions.assertEquals(dataNative.size(), nativeData.size());
 
-        for (int i = 0; i < data.size(); i++) {
-            ConsumerRecord<String, String> oldRecord = data.get(i);
+        for (int i = 0; i < nativeData.size(); i++) {
+            ConsumerRecord<String, String> oldRecord = nativeData.get(i);
             ConsumerRecord<String, String> newRecord = dataNative.get(i);
             Assertions.assertEquals(oldRecord.key(), newRecord.key());
             Assertions.assertEquals(
@@ -1142,14 +1143,13 @@ public class KafkaIT extends TestSuiteBase implements TestResource {
         producer.flush();
     }
 
-    private void generateNativeTestData(int start, int end) {
+    private void generateNativeTestData(String topic, int start, int end) {
         try {
             for (int i = start; i < end; i++) {
-                String topic = "test_topic_native_source";
                 Integer partition = 0;
                 Long timestamp = System.currentTimeMillis();
-                byte[] key = "native-key".getBytes(StandardCharsets.UTF_8);
-                byte[] value = "native-value".getBytes(StandardCharsets.UTF_8);
+                byte[] key = ("native-key" + i).getBytes(StandardCharsets.UTF_8);
+                byte[] value = ("native-value" + i).getBytes(StandardCharsets.UTF_8);
 
                 Header header1 =
                         new RecordHeader("header1", "value1".getBytes(StandardCharsets.UTF_8));
