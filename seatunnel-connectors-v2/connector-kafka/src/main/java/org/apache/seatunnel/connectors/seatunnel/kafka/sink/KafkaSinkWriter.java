@@ -69,8 +69,6 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
 
     private static final int PREFIX_RANGE = 10000;
 
-    private final boolean isNative;
-
     public KafkaSinkWriter(
             SinkWriter.Context context,
             SeaTunnelRowType seaTunnelRowType,
@@ -82,9 +80,6 @@ public class KafkaSinkWriter implements SinkWriter<SeaTunnelRow, KafkaCommitInfo
                 && !CollectionUtils.isEmpty(pluginConfig.get(ASSIGN_PARTITIONS))) {
             MessageContentPartitioner.setAssignPartitions(pluginConfig.get(ASSIGN_PARTITIONS));
         }
-
-        MessageFormat format = pluginConfig.get(FORMAT);
-        isNative = format == MessageFormat.NATIVE ? true : false;
 
         if (pluginConfig.get(TRANSACTION_PREFIX) != null) {
             this.transactionPrefix = pluginConfig.get(TRANSACTION_PREFIX);
