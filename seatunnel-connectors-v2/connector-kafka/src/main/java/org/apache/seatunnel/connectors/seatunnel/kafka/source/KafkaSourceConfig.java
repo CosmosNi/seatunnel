@@ -232,16 +232,7 @@ public class KafkaSourceConfig implements Serializable {
                     TableSchema.builder()
                             .column(
                                     PhysicalColumn.of(
-                                            "content",
-                                            new SeaTunnelRowType(
-                                                    new String[] {"content"},
-                                                    new SeaTunnelDataType<?>[] {
-                                                        BasicType.STRING_TYPE
-                                                    }),
-                                            0,
-                                            false,
-                                            null,
-                                            null))
+                                            "content", BasicType.STRING_TYPE, 0, false, null, null))
                             .build();
         }
         return CatalogTable.of(
