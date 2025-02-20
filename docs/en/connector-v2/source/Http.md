@@ -360,17 +360,21 @@ source {
 - See this link for task configuration [http_jsonpath_to_assert.conf](../../../../seatunnel-e2e/seatunnel-connector-v2-e2e/connector-http-e2e/src/test/resources/http_jsonpath_to_assert.conf).
 
 ### pageing
+When you need to concatenate page param in the URL,then add params.
+
+When you need to set page param to the body,add the key of page param in body.
 
 ```hocon
 source {
     Http {
       url = "http://localhost:8080/mock/queryData"
-      method = "GET"
+      method = "POST"
       format = "json"
+      body="""{"id":1,"page":"${page}"}"""
+      content_field = "$.data.*"
       params={
        page: "${page}"
       }
-      content_field = "$.data.*"
       pageing={
        total_page_size=20
        page_field=page
@@ -385,6 +389,7 @@ source {
       }
     }
 }
+
 
 ```
 
