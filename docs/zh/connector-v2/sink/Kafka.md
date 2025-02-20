@@ -248,3 +248,33 @@ sink {
   }
 }
 ```
+
+### format
+如果需要写入Kafka原生的信息，可以参考下面的配置。
+
+配置示例:
+```hocon
+sink {
+  kafka {
+      topic = "test_topic_native_sink"
+      bootstrap.servers = "kafkaCluster:9092"
+      format = "NATIVE"
+  }
+}
+```
+
+输入参数要求如下:
+```json
+{
+  "headers": {
+    "header1": "header1",
+    "header2": "header2"
+  },
+  "key": "dGVzdF9ieXRlc19kYXRh",  
+  "partition": 3,
+  "timestamp": 1672531200000,
+  "timestampType": "CREATE_TIME",
+  "value": "dGVzdF9ieXRlc19kYXRh"
+}
+```
+Note：key/value 需要 byte[]类型.

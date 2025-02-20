@@ -368,3 +368,38 @@ source {
   }
 }
 ```
+
+### format
+If you need to retain Kafka's native information, you can refer to the following configuration.
+
+Config Example:
+```hocon
+source {
+  Kafka {
+    topic = "test_topic_native_source"
+    bootstrap.servers = "kafkaCluster:9092"
+    start_mode = "earliest"
+    format_error_handle_way = skip
+    format = "NATIVE"
+    value_converter_schema_enabled = false
+    consumer.group = "native_group"
+  }
+}
+```
+
+The returned data is as follows:
+```json
+{
+  "headers": {
+    "header1": "header1",
+    "header2": "header2"
+  },
+  "key": "dGVzdF9ieXRlc19kYXRh",  
+  "partition": 3,
+  "timestamp": 1672531200000,
+  "timestampType": "CREATE_TIME",
+  "value": "dGVzdF9ieXRlc19kYXRh"
+}
+```
+Note：key/value is of type byte[].
+

@@ -362,3 +362,37 @@ source {
   }
 }
 ```
+
+### format
+如果需要保留Kafka原生的信息，可以参考如下配置。
+
+配置示例:
+```hocon
+source {
+  Kafka {
+    topic = "test_topic_native_source"
+    bootstrap.servers = "kafkaCluster:9092"
+    start_mode = "earliest"
+    format_error_handle_way = skip
+    format = "NATIVE"
+    value_converter_schema_enabled = false
+    consumer.group = "native_group"
+  }
+}
+```
+
+返回数据格式如下:
+```json
+{
+  "headers": {
+    "header1": "header1",
+    "header2": "header2"
+  },
+  "key": "dGVzdF9ieXRlc19kYXRh",  
+  "partition": 3,
+  "timestamp": 1672531200000,
+  "timestampType": "CREATE_TIME",
+  "value": "dGVzdF9ieXRlc19kYXRh"
+}
+```
+注意：key/value是byte[]类型。

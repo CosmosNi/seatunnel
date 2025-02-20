@@ -269,3 +269,34 @@ sink {
   }
 }
 ```
+
+
+### format
+If you need to write Kafka's native information, you can refer to the following configuration.
+
+Config Example:
+```hocon
+sink {
+  kafka {
+      topic = "test_topic_native_sink"
+      bootstrap.servers = "kafkaCluster:9092"
+      format = "NATIVE"
+  }
+}
+```
+
+The input parameter requirements are as follows:
+```json
+{
+  "headers": {
+    "header1": "header1",
+    "header2": "header2"
+  },
+  "key": "dGVzdF9ieXRlc19kYXRh",  
+  "partition": 3,
+  "timestamp": 1672531200000,
+  "timestampType": "CREATE_TIME",
+  "value": "dGVzdF9ieXRlc19kYXRh"
+}
+```
+Note：key/value is of type byte[].
