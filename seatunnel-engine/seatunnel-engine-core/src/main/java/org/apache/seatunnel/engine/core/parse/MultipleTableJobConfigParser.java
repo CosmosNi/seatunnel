@@ -23,7 +23,6 @@ import org.apache.seatunnel.shade.com.typesafe.config.Config;
 
 import org.apache.seatunnel.api.common.PluginIdentifier;
 import org.apache.seatunnel.api.configuration.ReadonlyConfig;
-import org.apache.seatunnel.api.options.ConnectorCommonOptions;
 import org.apache.seatunnel.api.options.EnvCommonOptions;
 import org.apache.seatunnel.api.sink.SaveModeExecuteLocation;
 import org.apache.seatunnel.api.sink.SaveModeExecuteWrapper;
@@ -95,6 +94,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.seatunnel.api.common.SeaTunnelAPIErrorCode.HANDLE_SAVE_MODE_FAILED;
+import static org.apache.seatunnel.api.options.ConnectorCommonOptions.PLUGIN_OUTPUT;
 import static org.apache.seatunnel.api.table.factory.FactoryUtil.DEFAULT_ID;
 import static org.apache.seatunnel.engine.core.parse.ConfigParserUtil.getFactoryId;
 import static org.apache.seatunnel.engine.core.parse.ConfigParserUtil.getInputIds;
@@ -347,8 +347,7 @@ public class MultipleTableJobConfigParser {
             int configIndex, Config sourceConfig, ClassLoader classLoader) {
         final ReadonlyConfig readonlyConfig = ReadonlyConfig.fromConfig(sourceConfig);
         final String factoryId = getFactoryId(readonlyConfig);
-        final String tableId =
-                readonlyConfig.getOptional(ConnectorCommonOptions.PLUGIN_OUTPUT).orElse(DEFAULT_ID);
+        final String tableId = readonlyConfig.getOptional(PLUGIN_OUTPUT).orElse(DEFAULT_ID);
 
         final int parallelism = getParallelism(readonlyConfig);
 
@@ -439,8 +438,7 @@ public class MultipleTableJobConfigParser {
             }
         }
 
-        final String tableId =
-                readonlyConfig.getOptional(ConnectorCommonOptions.PLUGIN_OUTPUT).orElse(DEFAULT_ID);
+        final String tableId = readonlyConfig.getOptional(PLUGIN_OUTPUT).orElse(DEFAULT_ID);
 
         Set<Action> inputActions =
                 inputs.stream()
@@ -471,7 +469,7 @@ public class MultipleTableJobConfigParser {
                         transform,
                         jarUrls,
                         new HashSet<>(),
-                        readonlyConfig.get(CommonOptions.PLUGIN_OUTPUT));
+                        readonlyConfig.get(PLUGIN_OUTPUT));
         transformAction.setParallelism(parallelism);
 
         List<Tuple2<CatalogTable, Action>> actions = new ArrayList<>();
