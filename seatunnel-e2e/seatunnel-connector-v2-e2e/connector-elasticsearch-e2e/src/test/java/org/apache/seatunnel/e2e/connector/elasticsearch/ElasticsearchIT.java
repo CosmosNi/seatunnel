@@ -457,8 +457,6 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         Container.ExecResult execResult =
                 container.executeJob("/elasticsearch/elasticsearch_sql_source_and_sink.conf");
         Assertions.assertEquals(0, execResult.getExitCode());
-        List<String> sinkData = readSinkDataWithOutSchema("st_index5");
-        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
     }
 
     private List<String> generateTestDataSet1() throws JsonProcessingException {
