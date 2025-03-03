@@ -451,11 +451,11 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
     }
 
     @TestTemplate
-    public void testElasticsearchWithoutSql(TestContainer container)
+    public void testElasticsearchWithSql(TestContainer container)
             throws IOException, InterruptedException {
 
         Container.ExecResult execResult =
-                container.executeJob("/elasticsearch/elasticsearch_sql_source_and_sink.conf");
+                container.executeJob("/elasticsearch/elasticsearch_source_with_sql.conf");
         Assertions.assertEquals(0, execResult.getExitCode());
     }
 

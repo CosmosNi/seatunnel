@@ -422,23 +422,33 @@ public class EsRestClient implements Closeable {
         if (columnNodes == null) {
             columnNodes = responseJson.get("columns");
         }
-        JsonNode valueNodes = responseJson.get("values");
-        List<Map<String, Object>> docs = new ArrayList<>(valueNodes.size());
-        for (int i = 0; i < valueNodes.size(); i++) {
-            JsonNode valueNode = valueNodes.get(i);
-            Map<String, Object> doc = new HashMap<>();
-            for (int j = 0; j < columnNodes.size(); j++) {
-                String fieldName = columnNodes.get(j).get("name").asText();
-                if (valueNode.get(j) instanceof TextNode) {
-                    doc.put(fieldName, valueNode.get(j).textValue());
-                } else {
-                    doc.put(fieldName, valueNode.get(j));
-                }
-            }
-            docs.add(doc);
+        JsonNode valueNodes = null;
+        // Compatible with elasticsearch 7 and 8 versions
+        if (responseJson.has("values")) {
+            valueNodes = responseJson.get("values");
+        } else if (responseJson.has("rows")) {
+            valueNodes = responseJson.get("rows");
         }
-        cursorResult.setColumnNodes(columnNodes);
+        List<Map<String, Object>> docs = new ArrayList<>();
+        if (valueNodes != null) {
+
+            for (int i = 0; i < valueNodes.size(); i++) {
+                JsonNode valueNode = valueNodes.get(i);
+                Map<String, Object> doc = new HashMap<>();
+                for (int j = 0; j < columnNodes.size(); j++) {
+                    String fieldName = columnNodes.get(j).get("name").asText();
+                    if (valueNode.get(j) instanceof TextNode) {
+                        doc.put(fieldName, valueNode.get(j).textValue());
+                    } else {
+                        doc.put(fieldName, valueNode.get(j));
+                    }
+                }
+                docs.add(doc);
+            }
+        }
         cursorResult.setRows(docs);
+        cursorResult.setColumnNodes(columnNodes);
+
         return cursorResult;
     }
 
