@@ -134,6 +134,8 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         createIndexWithFullType();
         createIndexForResourceNull("st_index4");
         createIndexWithNestType();
+        createIndexForSqlSearch();
+        generateTestSqlDataSet();
     }
 
     /** create a index,and bulk some documents */
@@ -215,6 +217,15 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                                 .toURI(),
                         StandardCharsets.UTF_8);
         esRestClient.createIndex(indexName, mapping);
+    }
+
+    private void createIndexForSqlSearch() throws IOException {
+        String mapping =
+                IOUtils.toString(
+                        ContainerUtil.getResourcesFile("/elasticsearch/st_index_with_sql.json")
+                                .toURI(),
+                        StandardCharsets.UTF_8);
+        esRestClient.createIndex("st_index_sql", mapping);
     }
 
     @TestTemplate
@@ -439,6 +450,17 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
     }
 
+    @TestTemplate
+    public void testElasticsearchWithoutSql(TestContainer container)
+            throws IOException, InterruptedException {
+
+        Container.ExecResult execResult =
+                container.executeJob("/elasticsearch/elasticsearch_sql_source_and_sink.conf");
+        Assertions.assertEquals(0, execResult.getExitCode());
+        List<String> sinkData = readSinkDataWithOutSchema("st_index5");
+        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
+    }
+
     private List<String> generateTestDataSet1() throws JsonProcessingException {
         String[] fields =
                 new String[] {
@@ -488,6 +510,84 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
             documents.add(objectMapper.writeValueAsString(doc));
         }
         return documents;
+    }
+
+    private void generateTestSqlDataSet() throws JsonProcessingException {
+        String[] fields =
+                new String[] {
+                    "c_string",
+                    "c_boolean",
+                    "c_tinyint",
+                    "c_smallint",
+                    "c_bigint",
+                    "c_float",
+                    "c_double",
+                    "c_decimal",
+                    "c_bytes",
+                    "c_int",
+                    "c_date",
+                    "c_timestamp",
+                    "c_null"
+                };
+
+        List<String> documents = new ArrayList<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> doc1 = new HashMap<>();
+        Object[] values1 =
+                new Object[] {
+                    "string",
+                    Boolean.FALSE,
+                    Byte.parseByte("1"),
+                    Short.parseShort("1"),
+                    Long.parseLong("1"),
+                    Float.parseFloat("1.1"),
+                    Double.parseDouble("1.1"),
+                    BigDecimal.valueOf(11, 1),
+                    "test".getBytes(),
+                    10,
+                    "2025-03-03T00:00:00.000Z",
+                    1740969505487L,
+                    // Null values are also a basic use case for testing
+                    null
+                };
+        for (int j = 0; j < fields.length; j++) {
+            doc1.put(fields[j], values1[j]);
+        }
+        documents.add(objectMapper.writeValueAsString(doc1));
+
+        Map<String, Object> doc2 = new HashMap<>();
+        Object[] values2 =
+                new Object[] {
+                    Collections.singletonMap("key", Short.parseShort(String.valueOf(10))),
+                    "string",
+                    Boolean.FALSE,
+                    Byte.parseByte("1"),
+                    Short.parseShort("1"),
+                    Long.parseLong("1"),
+                    Float.parseFloat("1.1"),
+                    Double.parseDouble("1.1"),
+                    BigDecimal.valueOf(11, 1),
+                    "test".getBytes(),
+                    30,
+                    "2025-03-03T00:00:00.000Z",
+                    1740969505487L,
+                    // Null values are also a basic use case for testing
+                    null
+                };
+        for (int j = 0; j < fields.length; j++) {
+            doc2.put(fields[j], values2[j]);
+        }
+        documents.add(objectMapper.writeValueAsString(doc2));
+
+        StringBuilder requestBody = new StringBuilder();
+        String indexHeader = String.format("{\"index\":{\"_index\":\"%s\"}\n", "st_index_sql");
+        for (int i = 0; i < documents.size(); i++) {
+            String row = documents.get(i);
+            requestBody.append(indexHeader);
+            requestBody.append(row);
+            requestBody.append("\n");
+        }
+        esRestClient.bulk(requestBody.toString());
     }
 
     private List<String> generateTestDataSet2() throws JsonProcessingException {

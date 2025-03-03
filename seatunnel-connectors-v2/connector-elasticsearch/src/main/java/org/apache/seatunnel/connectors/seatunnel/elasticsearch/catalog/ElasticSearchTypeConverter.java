@@ -43,6 +43,7 @@ import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsT
 import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsType.BYTE;
 import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsType.COMPLETION;
 import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsType.DATE;
+import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsType.DATETIME;
 import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsType.DATE_NANOS;
 import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsType.DATE_RANGE;
 import static org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.EsType.DENSE_VECTOR;
@@ -129,6 +130,7 @@ public class ElasticSearchTypeConverter implements BasicTypeConverter<BasicTypeD
                 builder.scale(3);
                 break;
             case DATE_NANOS:
+            case DATETIME:
                 builder.dataType(LocalTimeType.LOCAL_DATE_TIME_TYPE);
                 builder.scale(9);
                 break;
