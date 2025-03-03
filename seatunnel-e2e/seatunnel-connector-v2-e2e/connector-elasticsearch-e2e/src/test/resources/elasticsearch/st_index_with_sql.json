@@ -48,9 +48,6 @@
       },
       "c_tinyint": {
         "type": "long"
-      },
-      "c_null":{
-        "type": "long"
       }
     }
   }

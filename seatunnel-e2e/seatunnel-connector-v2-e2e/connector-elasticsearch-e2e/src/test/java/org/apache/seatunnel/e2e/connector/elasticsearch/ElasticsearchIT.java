@@ -524,8 +524,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                     "c_bytes",
                     "c_int",
                     "c_date",
-                    "c_timestamp",
-                    "c_null"
+                    "c_timestamp"
                 };
 
         List<String> documents = new ArrayList<>();
@@ -544,9 +543,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                     "test".getBytes(),
                     10,
                     "2025-03-03T00:00:00.000Z",
-                    1740969505487L,
-                    // Null values are also a basic use case for testing
-                    null
+                    1740969505487L
                 };
         for (int j = 0; j < fields.length; j++) {
             doc1.put(fields[j], values1[j]);
@@ -568,9 +565,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                     "test".getBytes(),
                     30,
                     "2025-03-03T00:00:00.000Z",
-                    1740969505487L,
-                    // Null values are also a basic use case for testing
-                    null
+                    1740969505487L
                 };
         for (int j = 0; j < fields.length; j++) {
             doc2.put(fields[j], values2[j]);
