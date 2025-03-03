@@ -422,7 +422,7 @@ public class EsRestClient implements Closeable {
         if (columnNodes == null) {
             columnNodes = responseJson.get("columns");
         }
-        JsonNode valueNodes = responseJson.get("rows");
+        JsonNode valueNodes = responseJson.get("values");
         List<Map<String, Object>> docs = new ArrayList<>(valueNodes.size());
         for (int i = 0; i < valueNodes.size(); i++) {
             JsonNode valueNode = valueNodes.get(i);
