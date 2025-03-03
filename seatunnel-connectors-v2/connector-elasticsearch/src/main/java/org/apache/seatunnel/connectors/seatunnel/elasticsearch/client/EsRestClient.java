@@ -422,13 +422,7 @@ public class EsRestClient implements Closeable {
         if (columnNodes == null) {
             columnNodes = responseJson.get("columns");
         }
-        JsonNode valueNodes = null;
-        // Compatible with elasticsearch 7 and 8 versions
-        if (responseJson.has("values")) {
-            valueNodes = responseJson.get("values");
-        } else if (responseJson.has("rows")) {
-            valueNodes = responseJson.get("rows");
-        }
+        JsonNode valueNodes = responseJson.get("rows");
         List<Map<String, Object>> docs = new ArrayList<>();
         if (valueNodes != null) {
 
