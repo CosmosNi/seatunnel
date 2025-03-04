@@ -510,7 +510,7 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         return documents;
     }
 
-    private void generateTestSqlDataSet() throws JsonProcessingException {
+    private void generateTestSqlDataSet() throws JsonProcessingException, InterruptedException {
         String[] fields =
                 new String[] {
                     "c_string",
@@ -553,7 +553,6 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         Map<String, Object> doc2 = new HashMap<>();
         Object[] values2 =
                 new Object[] {
-                    Collections.singletonMap("key", Short.parseShort(String.valueOf(10))),
                     "string",
                     Boolean.FALSE,
                     Byte.parseByte("1"),
@@ -580,7 +579,12 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
             requestBody.append(row);
             requestBody.append("\n");
         }
-        esRestClient.bulk(requestBody.toString());
+        BulkResponse response = esRestClient.bulk(requestBody.toString());
+        Assertions.assertFalse(response.isErrors(), response.getResponse());
+        // waiting index refresh
+        Thread.sleep(INDEX_REFRESH_MILL_DELAY);
+        Assertions.assertEquals(
+                2, esRestClient.getIndexDocsCount("st_index_sql").get(0).getDocsCount());
     }
 
     private List<String> generateTestDataSet2() throws JsonProcessingException {
