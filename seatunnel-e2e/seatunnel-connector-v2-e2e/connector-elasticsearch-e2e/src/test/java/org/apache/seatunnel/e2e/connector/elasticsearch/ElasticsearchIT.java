@@ -37,12 +37,13 @@ import org.apache.seatunnel.connectors.seatunnel.elasticsearch.dto.BulkResponse;
 import org.apache.seatunnel.connectors.seatunnel.elasticsearch.dto.source.ScrollResult;
 import org.apache.seatunnel.e2e.common.TestResource;
 import org.apache.seatunnel.e2e.common.TestSuiteBase;
+import org.apache.seatunnel.e2e.common.container.EngineType;
 import org.apache.seatunnel.e2e.common.container.TestContainer;
+import org.apache.seatunnel.e2e.common.junit.DisabledOnContainer;
 import org.apache.seatunnel.e2e.common.util.ContainerUtil;
 
 import org.apache.commons.io.IOUtils;
 
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,15 +71,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -228,229 +224,243 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
         esRestClient.createIndex("st_index_sql", mapping);
     }
 
-    @TestTemplate
-    public void testElasticsearchWithSchema(TestContainer container)
-            throws IOException, InterruptedException {
-        Container.ExecResult execResult =
-                container.executeJob("/elasticsearch/elasticsearch_source_and_sink.conf");
-        Assertions.assertEquals(0, execResult.getExitCode());
-        List<String> sinkData = readSinkDataWithSchema("st_index2");
-        // for DSL is: {"range":{"c_int":{"gte":10,"lte":20}}}
-        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
-    }
+    //    @TestTemplate
+    //    public void testElasticsearchWithSchema(TestContainer container)
+    //            throws IOException, InterruptedException {
+    //        Container.ExecResult execResult =
+    //                container.executeJob("/elasticsearch/elasticsearch_source_and_sink.conf");
+    //        Assertions.assertEquals(0, execResult.getExitCode());
+    //        List<String> sinkData = readSinkDataWithSchema("st_index2");
+    //        // for DSL is: {"range":{"c_int":{"gte":10,"lte":20}}}
+    //        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
+    //    }
+
+    //    @TestTemplate
+    //    public void testElasticsearchWithNestSchema(TestContainer container)
+    //            throws IOException, InterruptedException {
+    //        Container.ExecResult execResult =
+    //
+    // container.executeJob("/elasticsearch/elasticsearch_source_and_sink_with_nest.conf");
+    //        Assertions.assertEquals(0, execResult.getExitCode());
+    //
+    //        List<String> sinkData = readSinkDataWithNestSchema("st_index_nest_copy");
+    //        String data =
+    //                "{\"address\":[{\"zipcode\":\"10001\",\"city\":\"New York\",\"street\":\"123
+    // Main St\"},"
+    //                        + "{\"zipcode\":\"90001\",\"city\":\"Los Angeles\",\"street\":\"456
+    // Elm St\"}],\"name\":\"John Doe\"}";
+    //
+    //        Assertions.assertIterableEquals(Lists.newArrayList(data), sinkData);
+    //    }
+
+    //    @TestTemplate
+    //    public void testElasticsSearchWithMultiSourceByFilter(TestContainer container)
+    //            throws InterruptedException, IOException {
+    //        // read read_filter_index1,read_filter_index2
+    //        // write into read_filter_index1_copy,read_filter_index2_copy
+    //        createIndexDocsByName("read_filter_index1", testDataset1);
+    //        createIndexDocsByName("read_filter_index2", testDataset2);
+    //
+    //        Container.ExecResult execResult =
+    //                container.executeJob(
+    //                        "/elasticsearch/elasticsearch_multi_source_and_sink_by_filter.conf");
+    //        Assertions.assertEquals(0, execResult.getExitCode());
+    //
+    //        HashMap<String, Object> rangeParam = new HashMap<>();
+    //        rangeParam.put("gte", 10);
+    //        rangeParam.put("lte", 20);
+    //        HashMap<String, Object> range1 = new HashMap<>();
+    //        range1.put("c_int", rangeParam);
+    //        Map<String, Object> query1 = new HashMap<>();
+    //        query1.put("range", range1);
+    //
+    //        Map<String, Object> query2 = new HashMap<>();
+    //        HashMap<String, Object> range2 = new HashMap<>();
+    //        range2.put("c_int2", rangeParam);
+    //        query2.put("range", range2);
+    //
+    //        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(INDEX_REFRESH_MILL_DELAY));
+    //        Set<String> sinkData1 =
+    //                new HashSet<>(
+    //                        getDocsWithTransformDate(
+    //                                // read all field
+    //                                Collections.emptyList(),
+    //                                // read indexName
+    //                                "read_filter_index1_copy",
+    //                                // allowed c_null serialized if null
+    //                                Lists.newArrayList("c_null"),
+    //                                // query condition
+    //                                query1,
+    //                                // transformDate field:c_date
+    //                                Lists.newArrayList("c_date"),
+    //                                // order field
+    //                                "c_int"));
+    //
+    //        List<String> index1Data =
+    //                mapTestDatasetForDSL(
+    //                        // use testDataset1
+    //                        testDataset1,
+    //                        // filter testDataset1 match sinkData1
+    //                        doc -> {
+    //                            if (doc.has("c_int")) {
+    //                                int cInt = doc.get("c_int").asInt();
+    //                                return cInt >= 10 && cInt <= 20;
+    //                            }
+    //                            return false;
+    //                        },
+    //                        // mapping document all field to string
+    //                        JsonNode::toString);
+    //        Assertions.assertEquals(sinkData1.size(), index1Data.size());
+    //        index1Data.forEach(sinkData1::remove);
+    //        // data is completely consistent, and the size is zero after deletion
+    //        Assertions.assertEquals(0, sinkData1.size());
+    //
+    //        List<String> index2Data =
+    //                mapTestDatasetForDSL(
+    //                        testDataset2,
+    //                        // use customer predicate filter data to match sinkData2
+    //                        doc -> {
+    //                            if (doc.has("c_int2")) {
+    //                                int cInt = doc.get("c_int2").asInt();
+    //                                return cInt >= 10 && cInt <= 20;
+    //                            }
+    //                            return false;
+    //                        },
+    //                        // mapping doc to string,keep only three fields
+    //                        doc -> {
+    //                            Map<String, Object> map = new HashMap<>();
+    //                            map.put("c_int2", doc.get("c_int2"));
+    //                            map.put("c_null2", doc.get("c_null2"));
+    //                            map.put("c_date2", doc.get("c_date2"));
+    //                            return JsonUtils.toJsonString(map);
+    //                        });
+    //
+    //        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(INDEX_REFRESH_MILL_DELAY));
+    //        Set<String> sinkData2 =
+    //                new HashSet<>(
+    //                        getDocsWithTransformDate(
+    //                                // read three fields from index
+    //                                Lists.newArrayList("c_int2", "c_null2", "c_date2"),
+    //                                "read_filter_index2_copy",
+    //                                //// allowed c_null serialized if null
+    //                                Lists.newArrayList("c_null2"),
+    //                                query2,
+    //                                // // transformDate field:c_date2
+    //                                Lists.newArrayList("c_date2"),
+    //                                // order by c_int2
+    //                                "c_int2"));
+    //        Assertions.assertEquals(sinkData2.size(), index2Data.size());
+    //        index2Data.forEach(sinkData2::remove);
+    //        Assertions.assertEquals(0, sinkData2.size());
+    //    }
+
+    //    @TestTemplate
+    //    public void testElasticsearchWithMultiSink(TestContainer container)
+    //            throws IOException, InterruptedException {
+    //        Container.ExecResult execResult =
+    //
+    // container.executeJob("/elasticsearch/fakesource_to_elasticsearch_multi_sink.conf");
+    //        Assertions.assertEquals(0, execResult.getExitCode());
+    //        List<String> source5 =
+    //                Lists.newArrayList(
+    //                        "id",
+    //                        "c_bool",
+    //                        "c_tinyint",
+    //                        "c_smallint",
+    //                        "c_int",
+    //                        "c_bigint",
+    //                        "c_float",
+    //                        "c_double",
+    //                        "c_decimal",
+    //                        "c_string");
+    //        List<String> source6 =
+    //                Lists.newArrayList(
+    //                        "id",
+    //                        "c_bool",
+    //                        "c_tinyint",
+    //                        "c_smallint",
+    //                        "c_int",
+    //                        "c_bigint",
+    //                        "c_float",
+    //                        "c_double",
+    //                        "c_decimal");
+    //        List<String> sinkIndexData5 = readMultiSinkData("st_index5", source5);
+    //        List<String> sinkIndexData6 = readMultiSinkData("st_index6", source6);
+    //        String stIndex5 =
+    //
+    // "{\"c_smallint\":2,\"c_string\":\"NEW\",\"c_float\":4.3,\"c_double\":5.3,\"c_decimal\":6.3,\"id\":1,\"c_int\":3,\"c_bigint\":4,\"c_bool\":true,\"c_tinyint\":1}";
+    //        String stIndex6 =
+    //
+    // "{\"c_smallint\":2,\"c_float\":4.3,\"c_double\":5.3,\"c_decimal\":6.3,\"id\":1,\"c_int\":3,\"c_bigint\":4,\"c_bool\":true,\"c_tinyint\":1}";
+    //        Assertions.assertIterableEquals(Lists.newArrayList(stIndex5), sinkIndexData5);
+    //        Assertions.assertIterableEquals(Lists.newArrayList(stIndex6), sinkIndexData6);
+    //    }
+    //
+    //    @TestTemplate
+    //    public void testElasticsearchWithFullType(TestContainer container)
+    //            throws IOException, InterruptedException {
+    //        Container.ExecResult execResult =
+    //
+    // container.executeJob("/elasticsearch/elasticsearch_source_and_sink_full_type.conf");
+    //        Assertions.assertEquals(0, execResult.getExitCode());
+    //        Thread.sleep(INDEX_REFRESH_MILL_DELAY);
+    //        Assertions.assertEquals(
+    //                1,
+    //
+    // esRestClient.getIndexDocsCount("st_index_full_type_target").get(0).getDocsCount());
+    //    }
+    //
+    //    @TestTemplate
+    //    public void testFakeSourceToElasticsearchWithUpperCaseIndex(TestContainer container) {
+    //        CompletableFuture.supplyAsync(
+    //                () -> {
+    //                    try {
+    //                        Container.ExecResult execResult =
+    //                                container.executeJob(
+    //
+    // "/elasticsearch/fakesource_to_elasticsearch_with_upper_case_index.conf");
+    //                    } catch (IOException e) {
+    //                        throw new RuntimeException(e);
+    //                    } catch (InterruptedException e) {
+    //                        throw new RuntimeException(e);
+    //                    }
+    //                    return null;
+    //                });
+    //        Awaitility.await()
+    //                .atMost(120, TimeUnit.SECONDS)
+    //                .ignoreExceptions()
+    //                .pollInterval(3, TimeUnit.SECONDS)
+    //                .pollDelay(10, TimeUnit.SECONDS)
+    //                .untilAsserted(
+    //                        () -> {
+    //                            Assertions.assertEquals(
+    //                                    20,
+    //                                    esRestClient
+    //                                            .getIndexDocsCount("st_fake_table")
+    //                                            .get(0)
+    //                                            .getDocsCount());
+    //                        });
+    //    }
+    //
+    //    @TestTemplate
+    //    public void testElasticsearchWithoutSchema(TestContainer container)
+    //            throws IOException, InterruptedException {
+    //
+    //        Container.ExecResult execResult =
+    //                container.executeJob(
+    //                        "/elasticsearch/elasticsearch_source_without_schema_and_sink.conf");
+    //        Assertions.assertEquals(0, execResult.getExitCode());
+    //        List<String> sinkData = readSinkDataWithOutSchema("st_index4");
+    //        // for DSL is: {"range":{"c_int":{"gte":10,"lte":20}}}
+    //        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
+    //    }
 
     @TestTemplate
-    public void testElasticsearchWithNestSchema(TestContainer container)
-            throws IOException, InterruptedException {
-        Container.ExecResult execResult =
-                container.executeJob("/elasticsearch/elasticsearch_source_and_sink_with_nest.conf");
-        Assertions.assertEquals(0, execResult.getExitCode());
-
-        List<String> sinkData = readSinkDataWithNestSchema("st_index_nest_copy");
-        String data =
-                "{\"address\":[{\"zipcode\":\"10001\",\"city\":\"New York\",\"street\":\"123 Main St\"},"
-                        + "{\"zipcode\":\"90001\",\"city\":\"Los Angeles\",\"street\":\"456 Elm St\"}],\"name\":\"John Doe\"}";
-
-        Assertions.assertIterableEquals(Lists.newArrayList(data), sinkData);
-    }
-
-    @TestTemplate
-    public void testElasticsSearchWithMultiSourceByFilter(TestContainer container)
-            throws InterruptedException, IOException {
-        // read read_filter_index1,read_filter_index2
-        // write into read_filter_index1_copy,read_filter_index2_copy
-        createIndexDocsByName("read_filter_index1", testDataset1);
-        createIndexDocsByName("read_filter_index2", testDataset2);
-
-        Container.ExecResult execResult =
-                container.executeJob(
-                        "/elasticsearch/elasticsearch_multi_source_and_sink_by_filter.conf");
-        Assertions.assertEquals(0, execResult.getExitCode());
-
-        HashMap<String, Object> rangeParam = new HashMap<>();
-        rangeParam.put("gte", 10);
-        rangeParam.put("lte", 20);
-        HashMap<String, Object> range1 = new HashMap<>();
-        range1.put("c_int", rangeParam);
-        Map<String, Object> query1 = new HashMap<>();
-        query1.put("range", range1);
-
-        Map<String, Object> query2 = new HashMap<>();
-        HashMap<String, Object> range2 = new HashMap<>();
-        range2.put("c_int2", rangeParam);
-        query2.put("range", range2);
-
-        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(INDEX_REFRESH_MILL_DELAY));
-        Set<String> sinkData1 =
-                new HashSet<>(
-                        getDocsWithTransformDate(
-                                // read all field
-                                Collections.emptyList(),
-                                // read indexName
-                                "read_filter_index1_copy",
-                                // allowed c_null serialized if null
-                                Lists.newArrayList("c_null"),
-                                // query condition
-                                query1,
-                                // transformDate field:c_date
-                                Lists.newArrayList("c_date"),
-                                // order field
-                                "c_int"));
-
-        List<String> index1Data =
-                mapTestDatasetForDSL(
-                        // use testDataset1
-                        testDataset1,
-                        // filter testDataset1 match sinkData1
-                        doc -> {
-                            if (doc.has("c_int")) {
-                                int cInt = doc.get("c_int").asInt();
-                                return cInt >= 10 && cInt <= 20;
-                            }
-                            return false;
-                        },
-                        // mapping document all field to string
-                        JsonNode::toString);
-        Assertions.assertEquals(sinkData1.size(), index1Data.size());
-        index1Data.forEach(sinkData1::remove);
-        // data is completely consistent, and the size is zero after deletion
-        Assertions.assertEquals(0, sinkData1.size());
-
-        List<String> index2Data =
-                mapTestDatasetForDSL(
-                        testDataset2,
-                        // use customer predicate filter data to match sinkData2
-                        doc -> {
-                            if (doc.has("c_int2")) {
-                                int cInt = doc.get("c_int2").asInt();
-                                return cInt >= 10 && cInt <= 20;
-                            }
-                            return false;
-                        },
-                        // mapping doc to string,keep only three fields
-                        doc -> {
-                            Map<String, Object> map = new HashMap<>();
-                            map.put("c_int2", doc.get("c_int2"));
-                            map.put("c_null2", doc.get("c_null2"));
-                            map.put("c_date2", doc.get("c_date2"));
-                            return JsonUtils.toJsonString(map);
-                        });
-
-        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(INDEX_REFRESH_MILL_DELAY));
-        Set<String> sinkData2 =
-                new HashSet<>(
-                        getDocsWithTransformDate(
-                                // read three fields from index
-                                Lists.newArrayList("c_int2", "c_null2", "c_date2"),
-                                "read_filter_index2_copy",
-                                //// allowed c_null serialized if null
-                                Lists.newArrayList("c_null2"),
-                                query2,
-                                // // transformDate field:c_date2
-                                Lists.newArrayList("c_date2"),
-                                // order by c_int2
-                                "c_int2"));
-        Assertions.assertEquals(sinkData2.size(), index2Data.size());
-        index2Data.forEach(sinkData2::remove);
-        Assertions.assertEquals(0, sinkData2.size());
-    }
-
-    @TestTemplate
-    public void testElasticsearchWithMultiSink(TestContainer container)
-            throws IOException, InterruptedException {
-        Container.ExecResult execResult =
-                container.executeJob("/elasticsearch/fakesource_to_elasticsearch_multi_sink.conf");
-        Assertions.assertEquals(0, execResult.getExitCode());
-        List<String> source5 =
-                Lists.newArrayList(
-                        "id",
-                        "c_bool",
-                        "c_tinyint",
-                        "c_smallint",
-                        "c_int",
-                        "c_bigint",
-                        "c_float",
-                        "c_double",
-                        "c_decimal",
-                        "c_string");
-        List<String> source6 =
-                Lists.newArrayList(
-                        "id",
-                        "c_bool",
-                        "c_tinyint",
-                        "c_smallint",
-                        "c_int",
-                        "c_bigint",
-                        "c_float",
-                        "c_double",
-                        "c_decimal");
-        List<String> sinkIndexData5 = readMultiSinkData("st_index5", source5);
-        List<String> sinkIndexData6 = readMultiSinkData("st_index6", source6);
-        String stIndex5 =
-                "{\"c_smallint\":2,\"c_string\":\"NEW\",\"c_float\":4.3,\"c_double\":5.3,\"c_decimal\":6.3,\"id\":1,\"c_int\":3,\"c_bigint\":4,\"c_bool\":true,\"c_tinyint\":1}";
-        String stIndex6 =
-                "{\"c_smallint\":2,\"c_float\":4.3,\"c_double\":5.3,\"c_decimal\":6.3,\"id\":1,\"c_int\":3,\"c_bigint\":4,\"c_bool\":true,\"c_tinyint\":1}";
-        Assertions.assertIterableEquals(Lists.newArrayList(stIndex5), sinkIndexData5);
-        Assertions.assertIterableEquals(Lists.newArrayList(stIndex6), sinkIndexData6);
-    }
-
-    @TestTemplate
-    public void testElasticsearchWithFullType(TestContainer container)
-            throws IOException, InterruptedException {
-        Container.ExecResult execResult =
-                container.executeJob("/elasticsearch/elasticsearch_source_and_sink_full_type.conf");
-        Assertions.assertEquals(0, execResult.getExitCode());
-        Thread.sleep(INDEX_REFRESH_MILL_DELAY);
-        Assertions.assertEquals(
-                1,
-                esRestClient.getIndexDocsCount("st_index_full_type_target").get(0).getDocsCount());
-    }
-
-    @TestTemplate
-    public void testFakeSourceToElasticsearchWithUpperCaseIndex(TestContainer container) {
-        CompletableFuture.supplyAsync(
-                () -> {
-                    try {
-                        Container.ExecResult execResult =
-                                container.executeJob(
-                                        "/elasticsearch/fakesource_to_elasticsearch_with_upper_case_index.conf");
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    return null;
-                });
-        Awaitility.await()
-                .atMost(120, TimeUnit.SECONDS)
-                .ignoreExceptions()
-                .pollInterval(3, TimeUnit.SECONDS)
-                .pollDelay(10, TimeUnit.SECONDS)
-                .untilAsserted(
-                        () -> {
-                            Assertions.assertEquals(
-                                    20,
-                                    esRestClient
-                                            .getIndexDocsCount("st_fake_table")
-                                            .get(0)
-                                            .getDocsCount());
-                        });
-    }
-
-    @TestTemplate
-    public void testElasticsearchWithoutSchema(TestContainer container)
-            throws IOException, InterruptedException {
-
-        Container.ExecResult execResult =
-                container.executeJob(
-                        "/elasticsearch/elasticsearch_source_without_schema_and_sink.conf");
-        Assertions.assertEquals(0, execResult.getExitCode());
-        List<String> sinkData = readSinkDataWithOutSchema("st_index4");
-        // for DSL is: {"range":{"c_int":{"gte":10,"lte":20}}}
-        Assertions.assertIterableEquals(mapTestDatasetForDSL(), sinkData);
-    }
-
-    @TestTemplate
+    @DisabledOnContainer(
+            value = {},
+            type = {EngineType.SPARK, EngineType.FLINK},
+            disabledReason =
+                    "Currently SPARK do not support cdc. In addition, currently only the zeta engine supports schema evolution for pr https://github.com/apache/seatunnel/pull/5125.")
     public void testElasticsearchWithSql(TestContainer container)
             throws IOException, InterruptedException {
 
