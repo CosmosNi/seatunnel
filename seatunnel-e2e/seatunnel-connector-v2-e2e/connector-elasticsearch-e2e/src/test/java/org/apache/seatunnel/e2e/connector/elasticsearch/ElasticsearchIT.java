@@ -463,7 +463,9 @@ public class ElasticsearchIT extends TestSuiteBase implements TestResource {
                     "Currently SPARK do not support cdc. In addition, currently only the zeta engine supports schema evolution for pr https://github.com/apache/seatunnel/pull/5125.")
     public void testElasticsearchWithSql(TestContainer container)
             throws IOException, InterruptedException {
-
+        log.info(
+                "Start testElasticsearchWithSql,{}",
+                esRestClient.getIndexDocsCount("st_index_sql").get(0).getDocsCount());
         Container.ExecResult execResult =
                 container.executeJob("/elasticsearch/elasticsearch_source_with_sql.conf");
         Assertions.assertEquals(0, execResult.getExitCode());
