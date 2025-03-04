@@ -94,7 +94,7 @@ public final class ContainerUtil {
         Set<String> connectorNames = getConnectors(jobConfig, connectors, "source");
         connectorNames.addAll(getConnectors(jobConfig, connectors, "sink"));
         File module = new File(PROJECT_ROOT_PATH + File.separator + connectorsRootPath);
-
+        log.info("Copy connectors from {} to {}  {}", module, connectorNames, connectorPrefix);
         List<File> connectorFiles = getConnectorFiles(module, connectorNames, connectorPrefix);
         connectorFiles.forEach(
                 jar ->
@@ -245,6 +245,7 @@ public final class ContainerUtil {
         if (connectorNames.contains(currentModule.getName())) {
             File targetPath = new File(currentModule.getAbsolutePath() + File.separator + "target");
             for (File file : Objects.requireNonNull(targetPath.listFiles())) {
+                log.info("getConnectorFiles " + currentModule.getName());
                 if (file.getName().startsWith(currentModule.getName())
                         && !file.getName().endsWith("javadoc.jar")
                         && !file.getName().endsWith("tests.jar")) {
