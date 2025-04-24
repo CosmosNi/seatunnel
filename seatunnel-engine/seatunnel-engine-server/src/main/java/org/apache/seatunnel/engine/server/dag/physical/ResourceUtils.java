@@ -65,6 +65,7 @@ public class ResourceUtils {
         if (futures.size() != slotProfiles.size()) {
             throw new NoEnoughResourceException();
         }
+        subPlan.setSlotProfiles(slotProfiles);
     }
 
     private static void allocateResources(
