@@ -89,8 +89,6 @@ public class SerialVersionUIDCheckerTest {
         LOG.info("Initializing test environment...");
         CombinedTypeSolver typeSolver = new CombinedTypeSolver();
         typeSolver.add(new ReflectionTypeSolver());
-
-        // 只遍历一次文件系统，同时设置TypeSolver和查找连接器类路径
         setupEnvironment(typeSolver);
 
         JavaSymbolSolver symbolSolver = new JavaSymbolSolver(typeSolver);
