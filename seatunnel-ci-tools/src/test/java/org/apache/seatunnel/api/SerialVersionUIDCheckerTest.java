@@ -17,6 +17,7 @@
 
 package org.apache.seatunnel.api;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -44,6 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -61,41 +63,90 @@ public class SerialVersionUIDCheckerTest {
     private static final String CONNECTOR_DIR = "seatunnel-connectors-v2";
     private static final String JAVA_PATH_FRAGMENT =
             "src" + File.separator + "main" + File.separator + "java";
-    private static final JavaParser JAVA_PARSER;
+    private static volatile JavaParser JAVA_PARSER;
     private static final Set<String> checkedClasses = new HashSet<>();
     private static final Map<String, ClassOrInterfaceDeclaration> classDeclarationMap =
             new HashMap<>();
+    private static final List<Path> connectorClassPaths = new ArrayList<>();
+    private static volatile boolean initialized = false;
 
-    static {
+    @BeforeAll
+    public static void setupBeforeAll() {
+        if (!initialized) {
+            synchronized (SerialVersionUIDCheckerTest.class) {
+                if (!initialized) {
+                    try {
+                        initializeEnvironment();
+                        initialized = true;
+                    } catch (Exception e) {
+                        LOG.error("Failed to initialize test environment", e);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void initializeEnvironment() {
+        LOG.info("Initializing test environment...");
         CombinedTypeSolver typeSolver = new CombinedTypeSolver();
         typeSolver.add(new ReflectionTypeSolver());
-        setupTypeSolver(typeSolver);
+        
+        // 只遍历一次文件系统，同时设置TypeSolver和查找连接器类路径
+        setupEnvironment(typeSolver);
+        
         JavaSymbolSolver symbolSolver = new JavaSymbolSolver(typeSolver);
         JAVA_PARSER = new JavaParser();
         JAVA_PARSER.getParserConfiguration().setSymbolResolver(symbolSolver);
+        LOG.info("Test environment initialized successfully");
     }
 
-    private static void setupTypeSolver(CombinedTypeSolver typeSolver) {
-        try (Stream<Path> paths = Files.walk(Paths.get(".."), FileVisitOption.FOLLOW_LINKS)) {
-            paths.filter(path -> path.toString().contains("src/main/java"))
-                    .forEach(
-                            path -> {
-                                try {
-                                    typeSolver.add(new JavaParserTypeSolver(path.toFile()));
-                                } catch (Exception e) {
-                                    // ignore
-                                }
-                            });
+    private static void setupEnvironment(CombinedTypeSolver typeSolver) {
+        Path rootPath = Paths.get("..");
+        LOG.info("Scanning file system starting from: {}", rootPath.toAbsolutePath());
+
+        try (Stream<Path> paths = Files.walk(rootPath, FileVisitOption.FOLLOW_LINKS)) {
+            List<Path> allPaths = paths.collect(Collectors.toList());
+            LOG.info("Found {} total paths to process", allPaths.size());
+            List<Path> javaPaths = allPaths.stream()
+                .filter(path -> path.toString().contains("src/main/java"))
+                .collect(Collectors.toList());
+            
+            LOG.info("Found {} Java source directories", javaPaths.size());
+            for (Path path : javaPaths) {
+                try {
+                    typeSolver.add(new JavaParserTypeSolver(path.toFile()));
+                } catch (Exception e) {
+                    LOG.debug("Could not add path to type solver: {}", path, e);
+                }
+            }
+
+            List<Path> connectorPaths = allPaths.stream()
+                .filter(path -> {
+                    String pathString = path.toString();
+                    return pathString.endsWith(JAVA_FILE_EXTENSION)
+                            && pathString.contains(CONNECTOR_DIR)
+                            && pathString.contains(JAVA_PATH_FRAGMENT);
+                })
+                .collect(Collectors.toList());
+            
+            connectorClassPaths.addAll(connectorPaths);
+            LOG.info("Found {} connector class files for checking", connectorClassPaths.size());
+            
         } catch (IOException e) {
-            LOG.error("Failed to setup type solver", e);
+            LOG.error("Failed to scan file system", e);
         }
     }
 
     @Test
     public void checkSerialVersionUID() {
+        if (!initialized || JAVA_PARSER == null || connectorClassPaths.isEmpty()) {
+            LOG.error("Test environment not properly initialized");
+            fail("Test environment not properly initialized. Check logs for details.");
+            return;
+        }
+        
         List<String> missingSerialVersionUID = new ArrayList<>();
-        List<Path> connectorClassPaths = findConnectorClassPaths();
-        LOG.info("Found {} connector class files to check", connectorClassPaths.size());
+        LOG.info("Using {} pre-loaded connector class files for checking", connectorClassPaths.size());
 
         // First, populate the classDeclarationMap with all classes
         for (Path path : connectorClassPaths) {
@@ -115,21 +166,6 @@ public class SerialVersionUIDCheckerTest {
             fail(errorMessage);
         }
         LOG.info("All checked classes have correct serialVersionUID.");
-    }
-
-    private List<Path> findConnectorClassPaths() {
-        try (Stream<Path> paths = Files.walk(Paths.get(".."), FileVisitOption.FOLLOW_LINKS)) {
-            return paths.filter(
-                            path -> {
-                                String pathString = path.toString();
-                                return pathString.endsWith(JAVA_FILE_EXTENSION)
-                                        && pathString.contains(CONNECTOR_DIR)
-                                        && pathString.contains(JAVA_PATH_FRAGMENT);
-                            })
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to walk through connector directories", e);
-        }
     }
 
     /** Populate the classDeclarationMap with all class declarations from the given path. */
