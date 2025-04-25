@@ -45,7 +45,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -90,10 +89,10 @@ public class SerialVersionUIDCheckerTest {
         LOG.info("Initializing test environment...");
         CombinedTypeSolver typeSolver = new CombinedTypeSolver();
         typeSolver.add(new ReflectionTypeSolver());
-        
+
         // 只遍历一次文件系统，同时设置TypeSolver和查找连接器类路径
         setupEnvironment(typeSolver);
-        
+
         JavaSymbolSolver symbolSolver = new JavaSymbolSolver(typeSolver);
         JAVA_PARSER = new JavaParser();
         JAVA_PARSER.getParserConfiguration().setSymbolResolver(symbolSolver);
@@ -107,10 +106,11 @@ public class SerialVersionUIDCheckerTest {
         try (Stream<Path> paths = Files.walk(rootPath, FileVisitOption.FOLLOW_LINKS)) {
             List<Path> allPaths = paths.collect(Collectors.toList());
             LOG.info("Found {} total paths to process", allPaths.size());
-            List<Path> javaPaths = allPaths.stream()
-                .filter(path -> path.toString().contains("src/main/java"))
-                .collect(Collectors.toList());
-            
+            List<Path> javaPaths =
+                    allPaths.stream()
+                            .filter(path -> path.toString().contains("src/main/java"))
+                            .collect(Collectors.toList());
+
             LOG.info("Found {} Java source directories", javaPaths.size());
             for (Path path : javaPaths) {
                 try {
@@ -120,18 +120,20 @@ public class SerialVersionUIDCheckerTest {
                 }
             }
 
-            List<Path> connectorPaths = allPaths.stream()
-                .filter(path -> {
-                    String pathString = path.toString();
-                    return pathString.endsWith(JAVA_FILE_EXTENSION)
-                            && pathString.contains(CONNECTOR_DIR)
-                            && pathString.contains(JAVA_PATH_FRAGMENT);
-                })
-                .collect(Collectors.toList());
-            
+            List<Path> connectorPaths =
+                    allPaths.stream()
+                            .filter(
+                                    path -> {
+                                        String pathString = path.toString();
+                                        return pathString.endsWith(JAVA_FILE_EXTENSION)
+                                                && pathString.contains(CONNECTOR_DIR)
+                                                && pathString.contains(JAVA_PATH_FRAGMENT);
+                                    })
+                            .collect(Collectors.toList());
+
             connectorClassPaths.addAll(connectorPaths);
             LOG.info("Found {} connector class files for checking", connectorClassPaths.size());
-            
+
         } catch (IOException e) {
             LOG.error("Failed to scan file system", e);
         }
@@ -144,9 +146,11 @@ public class SerialVersionUIDCheckerTest {
             fail("Test environment not properly initialized. Check logs for details.");
             return;
         }
-        
+
         List<String> missingSerialVersionUID = new ArrayList<>();
-        LOG.info("Using {} pre-loaded connector class files for checking", connectorClassPaths.size());
+        LOG.info(
+                "Using {} pre-loaded connector class files for checking",
+                connectorClassPaths.size());
 
         // First, populate the classDeclarationMap with all classes
         for (Path path : connectorClassPaths) {
