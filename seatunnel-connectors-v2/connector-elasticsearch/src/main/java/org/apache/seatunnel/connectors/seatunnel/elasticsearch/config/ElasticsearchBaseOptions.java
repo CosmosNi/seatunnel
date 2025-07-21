@@ -87,4 +87,56 @@ public class ElasticsearchBaseOptions implements Serializable {
                     .stringType()
                     .noDefaultValue()
                     .withDescription("The key password for the trust store specified");
+
+    // Authentication configuration options
+    public static final Option<String> AUTH_TYPE =
+            Options.key("auth_type")
+                    .stringType()
+                    .defaultValue("basic")
+                    .withDescription(
+                            "Authentication type. Supported values: basic, api_key, oauth2");
+
+    // API Key authentication options
+    public static final Option<String> API_KEY_ID =
+            Options.key("api_key_id")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("Elasticsearch API key ID for authentication");
+
+    public static final Option<String> API_KEY =
+            Options.key("api_key")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("Elasticsearch API key secret for authentication");
+
+    public static final Option<String> API_KEY_ENCODED =
+            Options.key("api_key_encoded")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("Base64 encoded Elasticsearch API key (id:key format)");
+
+    // OAuth2 authentication options
+    public static final Option<String> OAUTH_CLIENT_ID =
+            Options.key("oauth_client_id")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("OAuth2 client ID for authentication");
+
+    public static final Option<String> OAUTH_CLIENT_SECRET =
+            Options.key("oauth_client_secret")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("OAuth2 client secret for authentication");
+
+    public static final Option<String> OAUTH_TOKEN_URL =
+            Options.key("oauth_token_url")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("OAuth2 token endpoint URL");
+
+    public static final Option<String> OAUTH_SCOPE =
+            Options.key("oauth_scope")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("OAuth2 scope (optional)");
 }
