@@ -27,8 +27,6 @@ import org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.auth.Authe
 import org.apache.seatunnel.connectors.seatunnel.elasticsearch.dto.BulkResponse;
 import org.apache.seatunnel.e2e.common.TestResource;
 import org.apache.seatunnel.e2e.common.TestSuiteBase;
-import org.apache.seatunnel.e2e.common.container.EngineType;
-import org.apache.seatunnel.e2e.common.junit.DisabledOnContainer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -53,11 +51,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-@DisabledOnContainer(
-        value = {},
-        type = {EngineType.SPARK, EngineType.FLINK},
-        disabledReason =
-                "Currently SPARK do not support cdc. In addition, currently only the zeta engine supports schema evolution for pr https://github.com/apache/seatunnel/pull/5125.")
 @Slf4j
 public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
 
