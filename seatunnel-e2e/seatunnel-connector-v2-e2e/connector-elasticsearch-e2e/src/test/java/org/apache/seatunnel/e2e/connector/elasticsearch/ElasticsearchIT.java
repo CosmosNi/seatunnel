@@ -86,6 +86,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
+@DisabledOnContainer(
+        value = {},
+        type = {EngineType.SPARK, EngineType.FLINK, EngineType.SEATUNNEL},
+        disabledReason =
+                "Currently SPARK do not support cdc. In addition, currently only the zeta engine supports schema evolution for pr https://github.com/apache/seatunnel/pull/5125.")
 public class ElasticsearchIT extends TestSuiteBase implements TestResource {
 
     private static final long INDEX_REFRESH_MILL_DELAY = 5000L;

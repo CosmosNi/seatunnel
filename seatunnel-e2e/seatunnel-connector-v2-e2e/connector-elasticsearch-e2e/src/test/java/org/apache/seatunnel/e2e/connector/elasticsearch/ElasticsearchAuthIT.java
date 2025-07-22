@@ -205,24 +205,16 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
                         + "}"
                         + "}";
 
-        Container.ExecResult result =
-                elasticsearchContainer.execInContainer(
-                        "curl",
-                        "-X",
-                        "PUT",
-                        "https://localhost:9200/" + TEST_INDEX,
-                        "-H",
-                        "Content-Type: application/json",
-                        "-u",
-                        VALID_USERNAME + ":" + VALID_PASSWORD,
-                        "-k",
-                        "-d",
-                        mapping);
+        log.info("Creating test index: {}", TEST_INDEX);
 
-        if (result.getExitCode() != 0) {
-            throw new RuntimeException("Failed to create test index: " + result.getStderr());
+        try {
+            // Use EsRestClient.createIndex() method like in ElasticsearchIT
+            setupClient.createIndex(TEST_INDEX, mapping);
+            log.info("Test index '{}' created successfully", TEST_INDEX);
+        } catch (Exception e) {
+            log.error("Failed to create test index: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create test index: " + TEST_INDEX, e);
         }
-        log.info("Test index created successfully");
     }
 
     private void insertTestData() throws Exception {
@@ -240,11 +232,21 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
             requestBody.append("\n");
         }
 
-        BulkResponse response = setupClient.bulk(requestBody.toString());
-        Assertions.assertFalse(response.isErrors(), "Failed to insert test data");
+        log.info("Inserting test data into index: {}", TEST_INDEX);
 
-        Thread.sleep(INDEX_REFRESH_DELAY);
-        log.info("Test data inserted successfully");
+        try {
+            BulkResponse response = setupClient.bulk(requestBody.toString());
+            if (response.isErrors()) {
+                log.error("Bulk insert had errors: {}", response.getResponse());
+                throw new RuntimeException("Failed to insert test data: " + response.getResponse());
+            }
+
+            Thread.sleep(INDEX_REFRESH_DELAY);
+            log.info("Test data inserted successfully - {} documents", 3);
+        } catch (Exception e) {
+            log.error("Failed to insert test data", e);
+            throw new RuntimeException("Failed to insert test data", e);
+        }
     }
 
     // Helper methods for creating configurations
