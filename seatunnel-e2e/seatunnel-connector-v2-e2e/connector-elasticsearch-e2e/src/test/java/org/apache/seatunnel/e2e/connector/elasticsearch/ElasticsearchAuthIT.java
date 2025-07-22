@@ -78,32 +78,12 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
 
     private ElasticsearchContainer elasticsearchContainer;
     private GenericContainer<?> oauth2MockServer;
-    private EsRestClient setupClient;
+    private EsRestClient esRestClient;
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     @Override
     public void startUp() throws Exception {
-        startElasticsearchContainer();
-        startOAuth2MockServer();
-        setupTestEnvironment();
-    }
-
-    @AfterEach
-    @Override
-    public void tearDown() throws Exception {
-        if (setupClient != null) {
-            setupClient.close();
-        }
-        if (elasticsearchContainer != null) {
-            elasticsearchContainer.stop();
-        }
-        if (oauth2MockServer != null) {
-            oauth2MockServer.stop();
-        }
-    }
-
-    private void startElasticsearchContainer() {
         elasticsearchContainer =
                 new ElasticsearchContainer(
                                 DockerImageName.parse("elasticsearch:8.9.0")
@@ -111,7 +91,6 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
                                                 "docker.elastic.co/elasticsearch/elasticsearch"))
                         .withNetwork(NETWORK)
                         .withEnv("cluster.routing.allocation.disk.threshold_enabled", "false")
-                        .withEnv("xpack.security.enabled", "true")
                         .withEnv("xpack.security.authc.api_key.enabled", "true")
                         .withNetworkAliases("elasticsearch")
                         .withPassword("elasticsearch")
@@ -122,6 +101,34 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
                                         DockerLoggerFactory.getLogger("elasticsearch:8.9.0")));
         Startables.deepStart(Stream.of(elasticsearchContainer)).join();
         log.info("Elasticsearch container started");
+
+        Map<String, Object> configMap = new HashMap<>();
+        configMap.put(
+                "hosts",
+                Lists.newArrayList("https://" + elasticsearchContainer.getHttpHostAddress()));
+        configMap.put("username", "elastic");
+        configMap.put("password", "elasticsearch");
+        configMap.put("tls_verify_certificate", false);
+        configMap.put("tls_verify_hostname", false);
+        ReadonlyConfig config = ReadonlyConfig.fromMap(configMap);
+        esRestClient = EsRestClient.createInstance(config);
+        startOAuth2MockServer();
+        createTestIndex();
+        insertTestData();
+    }
+
+    @AfterEach
+    @Override
+    public void tearDown() throws Exception {
+        if (esRestClient != null) {
+            esRestClient.close();
+        }
+        if (elasticsearchContainer != null) {
+            elasticsearchContainer.stop();
+        }
+        if (oauth2MockServer != null) {
+            oauth2MockServer.stop();
+        }
     }
 
     private void startOAuth2MockServer() {
@@ -182,16 +189,6 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         }
     }
 
-    private void setupTestEnvironment() throws Exception {
-        // Create setup client with basic auth
-        Map<String, Object> setupConfig = createBasicAuthConfig(VALID_USERNAME, VALID_PASSWORD);
-        setupClient = EsRestClient.createInstance(ReadonlyConfig.fromMap(setupConfig));
-
-        // Create test index and data
-        createTestIndex();
-        insertTestData();
-    }
-
     private void createTestIndex() throws Exception {
         String mapping =
                 "{"
@@ -207,8 +204,7 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         log.info("Creating test index: {}", TEST_INDEX);
 
         try {
-            // Use EsRestClient.createIndex() method like in ElasticsearchIT
-            setupClient.createIndex(TEST_INDEX, mapping);
+            esRestClient.createIndex(TEST_INDEX, mapping);
             log.info("Test index '{}' created successfully", TEST_INDEX);
         } catch (Exception e) {
             log.error("Failed to create test index: {}", e.getMessage(), e);
@@ -234,7 +230,7 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         log.info("Inserting test data into index: {}", TEST_INDEX);
 
         try {
-            BulkResponse response = setupClient.bulk(requestBody.toString());
+            BulkResponse response = esRestClient.bulk(requestBody.toString());
             if (response.isErrors()) {
                 log.error("Bulk insert had errors: {}", response.getResponse());
                 throw new RuntimeException("Failed to insert test data: " + response.getResponse());
@@ -250,16 +246,16 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
 
     // Helper methods for creating configurations
     private Map<String, Object> createBasicAuthConfig(String username, String password) {
-        Map<String, Object> config = new HashMap<>();
-        config.put(
+        Map<String, Object> configMap = new HashMap<>();
+        configMap.put(
                 "hosts",
                 Lists.newArrayList("https://" + elasticsearchContainer.getHttpHostAddress()));
-        config.put("auth_type", "basic");
-        config.put("username", username);
-        config.put("password", password);
-        config.put("tls_verify_certificate", false);
-        config.put("tls_verify_hostname", false);
-        return config;
+        configMap.put("username", username);
+        configMap.put("password", password);
+        configMap.put("tls_verify_certificate", false);
+        configMap.put("tls_verify_hostname", false);
+
+        return configMap;
     }
 
     private Map<String, Object> createApiKeyConfig(String keyId, String keySecret) {
