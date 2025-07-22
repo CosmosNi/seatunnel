@@ -106,23 +106,22 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     private void startElasticsearchContainer() {
         elasticsearchContainer =
                 new ElasticsearchContainer(
-                                DockerImageName.parse(ELASTICSEARCH_IMAGE)
+                                DockerImageName.parse("elasticsearch:8.9.0")
                                         .asCompatibleSubstituteFor(
                                                 "docker.elastic.co/elasticsearch/elasticsearch"))
                         .withNetwork(NETWORK)
-                        .withNetworkAliases("elasticsearch")
-                        .withPassword(VALID_PASSWORD)
                         .withEnv("cluster.routing.allocation.disk.threshold_enabled", "false")
                         .withEnv("xpack.security.enabled", "true")
                         .withEnv("xpack.security.authc.api_key.enabled", "true")
+                        .withNetworkAliases("elasticsearch")
+                        .withPassword("elasticsearch")
                         .withStartupAttempts(5)
                         .withStartupTimeout(Duration.ofMinutes(5))
                         .withLogConsumer(
                                 new Slf4jLogConsumer(
-                                        DockerLoggerFactory.getLogger(ELASTICSEARCH_IMAGE)));
-
+                                        DockerLoggerFactory.getLogger("elasticsearch:8.9.0")));
         Startables.deepStart(Stream.of(elasticsearchContainer)).join();
-        log.info("Elasticsearch container started for authentication testing");
+        log.info("Elasticsearch container started");
     }
 
     private void startOAuth2MockServer() {
