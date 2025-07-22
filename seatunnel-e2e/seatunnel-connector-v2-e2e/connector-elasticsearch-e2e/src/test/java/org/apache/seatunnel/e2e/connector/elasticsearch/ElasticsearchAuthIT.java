@@ -27,6 +27,8 @@ import org.apache.seatunnel.connectors.seatunnel.elasticsearch.client.auth.Authe
 import org.apache.seatunnel.connectors.seatunnel.elasticsearch.dto.BulkResponse;
 import org.apache.seatunnel.e2e.common.TestResource;
 import org.apache.seatunnel.e2e.common.TestSuiteBase;
+import org.apache.seatunnel.e2e.common.container.EngineType;
+import org.apache.seatunnel.e2e.common.junit.DisabledOnContainer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -48,6 +50,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+@DisabledOnContainer(
+        value = {},
+        type = {EngineType.SPARK, EngineType.FLINK},
+        disabledReason =
+                "Currently SPARK do not support cdc. In addition, currently only the zeta engine supports schema evolution for pr https://github.com/apache/seatunnel/pull/5125.")
 @Slf4j
 public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
 
@@ -73,8 +80,10 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     // OAuth2 test constants
     private static final String VALID_OAUTH_CLIENT_ID = "test-client";
     private static final String VALID_OAUTH_CLIENT_SECRET = "test-secret";
-    private static final String VALID_OAUTH_TOKEN_URL = "http://oauth2-server:1080/oauth/token";
     private static final String INVALID_OAUTH_TOKEN_URL = "http://invalid-server:1080/oauth/token";
+
+    // OAuth2 token URL will be set dynamically after container starts
+    private String validOAuthTokenUrl;
 
     private ElasticsearchContainer elasticsearchContainer;
     private GenericContainer<?> oauth2MockServer;
@@ -112,9 +121,9 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         configMap.put("tls_verify_hostname", false);
         ReadonlyConfig config = ReadonlyConfig.fromMap(configMap);
         esRestClient = EsRestClient.createInstance(config);
-        startOAuth2MockServer();
         createTestIndex();
         insertTestData();
+        startOAuth2MockServer();
     }
 
     @AfterEach
@@ -143,6 +152,16 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
                                         DockerLoggerFactory.getLogger(OAUTH2_MOCK_IMAGE)));
 
         Startables.deepStart(Stream.of(oauth2MockServer)).join();
+
+        // Set the OAuth2 token URL using the actual host and port
+        validOAuthTokenUrl =
+                "http://"
+                        + oauth2MockServer.getHost()
+                        + ":"
+                        + oauth2MockServer.getMappedPort(1080)
+                        + "/oauth/token";
+        log.info("OAuth2 token URL set to: {}", validOAuthTokenUrl);
+
         setupOAuth2MockEndpoints();
         log.info("OAuth2 mock server started for authentication testing");
     }
@@ -456,7 +475,7 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
 
         Map<String, Object> config =
                 createOAuth2Config(
-                        VALID_OAUTH_CLIENT_ID, VALID_OAUTH_CLIENT_SECRET, VALID_OAUTH_TOKEN_URL);
+                        VALID_OAUTH_CLIENT_ID, VALID_OAUTH_CLIENT_SECRET, validOAuthTokenUrl);
         ReadonlyConfig readonlyConfig = ReadonlyConfig.fromMap(config);
 
         // Test provider creation
