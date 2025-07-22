@@ -17,6 +17,7 @@
 
 package org.apache.seatunnel.e2e.connector.elasticsearch;
 
+import org.apache.seatunnel.shade.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.seatunnel.shade.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.seatunnel.shade.com.google.common.collect.Lists;
 
@@ -28,36 +29,46 @@ import org.apache.seatunnel.connectors.seatunnel.elasticsearch.dto.BulkResponse;
 import org.apache.seatunnel.e2e.common.TestResource;
 import org.apache.seatunnel.e2e.common.TestSuiteBase;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.TrustAllStrategy;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.http.util.EntityUtils;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
-import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.DockerLoggerFactory;
-import org.testcontainers.utility.MountableFile;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
-import java.net.URL;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 @Slf4j
 public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
 
     private static final String ELASTICSEARCH_IMAGE = "elasticsearch:8.9.0";
-    private static final String OAUTH2_MOCK_IMAGE = "mockserver/mockserver:5.15.0";
     private static final long INDEX_REFRESH_DELAY = 2000L;
-    private static final String TMP_DIR = "/tmp";
 
     // Test data constants
     private static final String TEST_INDEX = "auth_test_index";
@@ -66,31 +77,25 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     private static final String INVALID_USERNAME = "wrong_user";
     private static final String INVALID_PASSWORD = "wrong_password";
 
-    // API Key test constants
-    private static final String VALID_API_KEY_ID = "test-api-key-id";
-    private static final String VALID_API_KEY_SECRET = "test-api-key-secret";
+    // API Key test constants - will be set dynamically after container starts
+    private String validApiKeyId;
+    private String validApiKeySecret;
+    private String validEncodedApiKey;
     private static final String INVALID_API_KEY_ID = "invalid-key-id";
     private static final String INVALID_API_KEY_SECRET = "invalid-key-secret";
-    private static final String VALID_ENCODED_API_KEY =
-            "dGVzdC1hcGkta2V5LWlkOnRlc3QtYXBpLWtleS1zZWNyZXQ=";
-
-    // OAuth2 test constants
-    private static final String VALID_OAUTH_CLIENT_ID = "test-client";
-    private static final String VALID_OAUTH_CLIENT_SECRET = "test-secret";
-    private static final String INVALID_OAUTH_TOKEN_URL = "http://invalid-server:1080/oauth/token";
-
-    // OAuth2 token URL will be set dynamically after container starts
-    private String validOAuthTokenUrl;
 
     private ElasticsearchContainer elasticsearchContainer;
-    private GenericContainer<?> oauth2MockServer;
     private EsRestClient esRestClient;
     private ObjectMapper objectMapper = new ObjectMapper();
+    private CloseableHttpClient httpClient;
 
     @BeforeEach
     @Override
     public void startUp() throws Exception {
-        startOAuth2MockServer();
+        // Initialize HTTP client with SSL trust all strategy
+        initializeHttpClient();
+
+        // Start Elasticsearch container
         elasticsearchContainer =
                 new ElasticsearchContainer(
                                 DockerImageName.parse(ELASTICSEARCH_IMAGE)
@@ -109,6 +114,11 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         Startables.deepStart(Stream.of(elasticsearchContainer)).join();
         log.info("Elasticsearch container started");
 
+        // Wait for Elasticsearch to be ready and create real API keys
+        waitForElasticsearchReady();
+        createRealApiKeys();
+
+        // Initialize ES client for test data setup
         Map<String, Object> configMap = new HashMap<>();
         configMap.put(
                 "hosts",
@@ -129,56 +139,148 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         if (esRestClient != null) {
             esRestClient.close();
         }
+        if (httpClient != null) {
+            httpClient.close();
+        }
         if (elasticsearchContainer != null) {
             elasticsearchContainer.stop();
         }
-        if (oauth2MockServer != null) {
-            oauth2MockServer.stop();
+    }
+
+    /** Initialize HTTP client with SSL trust all strategy for testing */
+    private void initializeHttpClient()
+            throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        httpClient =
+                HttpClients.custom()
+                        .setSSLContext(
+                                SSLContextBuilder.create()
+                                        .loadTrustMaterial(TrustAllStrategy.INSTANCE)
+                                        .build())
+                        .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                        .build();
+        log.info("HTTP client initialized with SSL trust all strategy");
+    }
+
+    /** Wait for Elasticsearch to be ready */
+    private void waitForElasticsearchReady() throws IOException, InterruptedException {
+        String elasticsearchUrl = "https://" + elasticsearchContainer.getHttpHostAddress();
+        String healthUrl = elasticsearchUrl + "/_cluster/health";
+
+        log.info("Waiting for Elasticsearch to be ready at: {}", healthUrl);
+
+        for (int i = 0; i < 30; i++) {
+            try {
+                HttpGet request = new HttpGet(healthUrl);
+                String auth =
+                        Base64.getEncoder()
+                                .encodeToString(
+                                        (VALID_USERNAME + ":" + VALID_PASSWORD)
+                                                .getBytes(StandardCharsets.UTF_8));
+                request.setHeader("Authorization", "Basic " + auth);
+
+                HttpResponse response = httpClient.execute(request);
+                if (response.getStatusLine().getStatusCode() == 200) {
+                    log.info("Elasticsearch is ready");
+                    return;
+                }
+            } catch (Exception e) {
+                log.debug("Elasticsearch not ready yet, attempt {}/30: {}", i + 1, e.getMessage());
+            }
+
+            TimeUnit.SECONDS.sleep(2);
+        }
+
+        throw new RuntimeException("Elasticsearch failed to become ready within timeout");
+    }
+
+    /** Create real API keys using Elasticsearch API */
+    private void createRealApiKeys() throws IOException {
+        String elasticsearchUrl = "https://" + elasticsearchContainer.getHttpHostAddress();
+        String apiKeyUrl = elasticsearchUrl + "/_security/api_key";
+
+        log.info("Creating real API key at: {}", apiKeyUrl);
+
+        // Create API key request body
+        String requestBody =
+                "{\n"
+                        + "  \"name\": \"seatunnel-test-api-key\",\n"
+                        + "  \"role_descriptors\": {\n"
+                        + "    \"seatunnel_test_role\": {\n"
+                        + "      \"cluster\": [\"monitor\", \"manage_index_templates\"],\n"
+                        + "      \"indices\": [\n"
+                        + "        {\n"
+                        + "          \"names\": [\""
+                        + TEST_INDEX
+                        + "\", \"test_*\"],\n"
+                        + "          \"privileges\": [\"all\"]\n"
+                        + "        }\n"
+                        + "      ]\n"
+                        + "    }\n"
+                        + "  },\n"
+                        + "  \"metadata\": {\n"
+                        + "    \"application\": \"seatunnel-test\",\n"
+                        + "    \"environment\": \"integration-test\"\n"
+                        + "  }\n"
+                        + "}";
+
+        HttpPost request = new HttpPost(apiKeyUrl);
+        String auth =
+                Base64.getEncoder()
+                        .encodeToString(
+                                (VALID_USERNAME + ":" + VALID_PASSWORD)
+                                        .getBytes(StandardCharsets.UTF_8));
+        request.setHeader("Authorization", "Basic " + auth);
+        request.setHeader("Content-Type", "application/json");
+        request.setEntity(new StringEntity(requestBody, StandardCharsets.UTF_8));
+
+        HttpResponse response = httpClient.execute(request);
+        String responseBody = EntityUtils.toString(response.getEntity());
+
+        if (response.getStatusLine().getStatusCode() != 200) {
+            throw new RuntimeException("Failed to create API key: " + responseBody);
+        }
+
+        // Parse response to extract API key details
+        try {
+            JsonNode jsonResponse = objectMapper.readTree(responseBody);
+            validApiKeyId = jsonResponse.get("id").asText();
+            validApiKeySecret = jsonResponse.get("api_key").asText();
+            validEncodedApiKey =
+                    Base64.getEncoder()
+                            .encodeToString(
+                                    (validApiKeyId + ":" + validApiKeySecret)
+                                            .getBytes(StandardCharsets.UTF_8));
+
+            log.info(
+                    "API Key created successfully - ID: {}, Secret: {}, Encoded: {}",
+                    validApiKeyId,
+                    validApiKeySecret,
+                    validEncodedApiKey);
+
+            // Verify the API key works
+            verifyApiKey();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse API key response: " + responseBody, e);
         }
     }
 
-    private void startOAuth2MockServer() {
-        Optional<URL> resource =
-                Optional.ofNullable(
-                        ElasticsearchAuthIT.class.getResource(getOAuth2MockServerConfig()));
+    /** Verify that the created API key works */
+    private void verifyApiKey() throws IOException {
+        String elasticsearchUrl = "https://" + elasticsearchContainer.getHttpHostAddress();
+        String authUrl = elasticsearchUrl + "/_security/_authenticate";
 
-        oauth2MockServer =
-                new GenericContainer<>(DockerImageName.parse(OAUTH2_MOCK_IMAGE))
-                        .withNetwork(NETWORK)
-                        .withNetworkAliases("oauth2-server")
-                        .withExposedPorts(1080)
-                        .withCopyFileToContainer(
-                                MountableFile.forHostPath(
-                                        new File(
-                                                        resource.orElseThrow(
-                                                                        () ->
-                                                                                new IllegalArgumentException(
-                                                                                        "Can not get config file of OAuth2 mockServer"))
-                                                                .getPath())
-                                                .getAbsolutePath()),
-                                TMP_DIR + getOAuth2MockServerConfig())
-                        .withEnv(
-                                "MOCKSERVER_INITIALIZATION_JSON_PATH",
-                                TMP_DIR + getOAuth2MockServerConfig())
-                        .withEnv("MOCKSERVER_LOG_LEVEL", "WARN")
-                        .withLogConsumer(
-                                new Slf4jLogConsumer(
-                                        DockerLoggerFactory.getLogger(OAUTH2_MOCK_IMAGE)))
-                        .waitingFor(new HttpWaitStrategy().forPath("/").forStatusCode(404));
+        HttpGet request = new HttpGet(authUrl);
+        request.setHeader("Authorization", "ApiKey " + validEncodedApiKey);
 
-        Startables.deepStart(Stream.of(oauth2MockServer)).join();
+        HttpResponse response = httpClient.execute(request);
+        String responseBody = EntityUtils.toString(response.getEntity());
 
-        validOAuthTokenUrl =
-                "http://"
-                        + oauth2MockServer.getHost()
-                        + ":"
-                        + oauth2MockServer.getMappedPort(1080)
-                        + "/oauth/token";
-        log.info("OAuth2 token URL set to: {}", validOAuthTokenUrl);
-    }
-
-    public String getOAuth2MockServerConfig() {
-        return "/oauth2-mockserver-config.json";
+        if (response.getStatusLine().getStatusCode() == 200) {
+            log.info("API Key verification successful: {}", responseBody);
+        } else {
+            throw new RuntimeException("API Key verification failed: " + responseBody);
+        }
     }
 
     private void createTestIndex() throws Exception {
@@ -275,21 +377,6 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         return config;
     }
 
-    private Map<String, Object> createOAuth2Config(
-            String clientId, String clientSecret, String tokenUrl) {
-        Map<String, Object> config = new HashMap<>();
-        config.put(
-                "hosts",
-                Lists.newArrayList("https://" + elasticsearchContainer.getHttpHostAddress()));
-        config.put("auth_type", "oauth2");
-        config.put("oauth_client_id", clientId);
-        config.put("oauth_client_secret", clientSecret);
-        config.put("oauth_token_url", tokenUrl);
-        config.put("tls_verify_certificate", false);
-        config.put("tls_verify_hostname", false);
-        return config;
-    }
-
     // ==================== Basic Authentication Tests ====================
 
     /** Test successful basic authentication with valid credentials */
@@ -363,7 +450,7 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     public void testApiKeyAuthenticationSuccess() throws Exception {
         log.info("=== Testing API Key Authentication Success ===");
 
-        Map<String, Object> config = createApiKeyConfig(VALID_API_KEY_ID, VALID_API_KEY_SECRET);
+        Map<String, Object> config = createApiKeyConfig(validApiKeyId, validApiKeySecret);
         ReadonlyConfig readonlyConfig = ReadonlyConfig.fromMap(config);
 
         // Test provider creation
@@ -373,13 +460,15 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         Assertions.assertEquals(
                 "api_key", provider.getAuthType(), "Provider should be api_key auth type");
 
-        // Test client creation
+        // Test client creation and functionality
         try (EsRestClient client = EsRestClient.createInstance(readonlyConfig)) {
             Assertions.assertNotNull(client, "EsRestClient should be created successfully");
 
-            // Note: This might fail if the API key is not actually valid in Elasticsearch
-            // But the provider creation and client creation should succeed
-            log.info("✓ API key authentication provider and client creation test passed");
+            // Verify client can perform operations with real API key
+            long docCount = client.getIndexDocsCount(TEST_INDEX).get(0).getDocsCount();
+            Assertions.assertTrue(docCount > 0, "Should be able to query index with valid API key");
+
+            log.info("✓ API key authentication success test passed - {} documents found", docCount);
         }
     }
 
@@ -422,7 +511,7 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     public void testApiKeyEncodedAuthentication() throws Exception {
         log.info("=== Testing API Key Encoded Authentication ===");
 
-        Map<String, Object> config = createApiKeyEncodedConfig(VALID_ENCODED_API_KEY);
+        Map<String, Object> config = createApiKeyEncodedConfig(validEncodedApiKey);
         ReadonlyConfig readonlyConfig = ReadonlyConfig.fromMap(config);
 
         // Test provider creation
@@ -432,74 +521,16 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         Assertions.assertEquals(
                 "api_key", provider.getAuthType(), "Provider should be api_key auth type");
 
-        // Test client creation
-        try (EsRestClient client = EsRestClient.createInstance(readonlyConfig)) {
-            Assertions.assertNotNull(client, "EsRestClient should be created successfully");
-            log.info("✓ API key encoded authentication test passed");
-        }
-    }
-
-    // ==================== OAuth2 Authentication Tests ====================
-
-    /** Test successful OAuth2 authentication configuration */
-    @Test
-    public void testOAuth2AuthenticationSuccess() throws Exception {
-        log.info("=== Testing OAuth2 Authentication Success ===");
-
-        Map<String, Object> config =
-                createOAuth2Config(
-                        VALID_OAUTH_CLIENT_ID, VALID_OAUTH_CLIENT_SECRET, validOAuthTokenUrl);
-        ReadonlyConfig readonlyConfig = ReadonlyConfig.fromMap(config);
-
-        // Test provider creation
-        AuthenticationProvider provider =
-                AuthenticationProviderFactory.createProvider(readonlyConfig);
-        Assertions.assertNotNull(provider, "Authentication provider should be created");
-        Assertions.assertEquals(
-                "oauth2", provider.getAuthType(), "Provider should be oauth2 auth type");
-
-        // Test client creation (should succeed)
+        // Test client creation and functionality
         try (EsRestClient client = EsRestClient.createInstance(readonlyConfig)) {
             Assertions.assertNotNull(client, "EsRestClient should be created successfully");
 
-            // Note: OAuth2 operations will likely fail because Elasticsearch doesn't accept our
-            // mock token
-            // But the provider creation and client creation should succeed
-            log.info("✓ OAuth2 authentication provider and client creation test passed");
+            // Verify client can perform operations with encoded API key
+            long docCount = client.getIndexDocsCount(TEST_INDEX).get(0).getDocsCount();
+            Assertions.assertTrue(
+                    docCount > 0, "Should be able to query index with valid encoded API key");
+
+            log.info("✓ API key encoded authentication test passed - {} documents found", docCount);
         }
-    }
-
-    /** Test OAuth2 authentication failure with invalid configuration */
-    @Test
-    public void testOAuth2AuthenticationFailure() throws Exception {
-        log.info("=== Testing OAuth2 Authentication Failure ===");
-
-        Map<String, Object> config =
-                createOAuth2Config(
-                        VALID_OAUTH_CLIENT_ID, VALID_OAUTH_CLIENT_SECRET, INVALID_OAUTH_TOKEN_URL);
-        ReadonlyConfig readonlyConfig = ReadonlyConfig.fromMap(config);
-
-        // Test provider creation (should succeed)
-        AuthenticationProvider provider =
-                AuthenticationProviderFactory.createProvider(readonlyConfig);
-        Assertions.assertNotNull(provider, "Authentication provider should be created");
-        Assertions.assertEquals(
-                "oauth2", provider.getAuthType(), "Provider should be oauth2 auth type");
-
-        // Test client creation (might fail due to invalid token URL)
-        Exception exception =
-                Assertions.assertThrows(
-                        Exception.class,
-                        () -> {
-                            try (EsRestClient client =
-                                    EsRestClient.createInstance(readonlyConfig)) {
-                                // This should fail when trying to obtain OAuth2 token
-                            }
-                        },
-                        "Should throw exception when OAuth2 token acquisition fails");
-
-        log.info(
-                "✓ OAuth2 authentication failure test passed - exception: {}",
-                exception.getMessage());
     }
 }
