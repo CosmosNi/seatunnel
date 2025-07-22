@@ -34,20 +34,23 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.containers.wait.strategy.HttpWaitStrategy;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.lifecycle.Startables;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.DockerLoggerFactory;
+import org.testcontainers.utility.MountableFile;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
+import java.net.URL;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 @DisabledOnContainer(
@@ -61,6 +64,7 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     private static final String ELASTICSEARCH_IMAGE = "elasticsearch:8.9.0";
     private static final String OAUTH2_MOCK_IMAGE = "mockserver/mockserver:5.15.0";
     private static final long INDEX_REFRESH_DELAY = 2000L;
+    private static final String TMP_DIR = "/tmp";
 
     // Test data constants
     private static final String TEST_INDEX = "auth_test_index";
@@ -93,9 +97,10 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     @BeforeEach
     @Override
     public void startUp() throws Exception {
+        startOAuth2MockServer();
         elasticsearchContainer =
                 new ElasticsearchContainer(
-                                DockerImageName.parse("elasticsearch:8.9.0")
+                                DockerImageName.parse(ELASTICSEARCH_IMAGE)
                                         .asCompatibleSubstituteFor(
                                                 "docker.elastic.co/elasticsearch/elasticsearch"))
                         .withNetwork(NETWORK)
@@ -123,7 +128,6 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
         esRestClient = EsRestClient.createInstance(config);
         createTestIndex();
         insertTestData();
-        startOAuth2MockServer();
     }
 
     @AfterEach
@@ -141,19 +145,36 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
     }
 
     private void startOAuth2MockServer() {
+        Optional<URL> resource =
+                Optional.ofNullable(
+                        ElasticsearchAuthIT.class.getResource(getOAuth2MockServerConfig()));
+
         oauth2MockServer =
                 new GenericContainer<>(DockerImageName.parse(OAUTH2_MOCK_IMAGE))
                         .withNetwork(NETWORK)
                         .withNetworkAliases("oauth2-server")
                         .withExposedPorts(1080)
+                        .withCopyFileToContainer(
+                                MountableFile.forHostPath(
+                                        new File(
+                                                        resource.orElseThrow(
+                                                                        () ->
+                                                                                new IllegalArgumentException(
+                                                                                        "Can not get config file of OAuth2 mockServer"))
+                                                                .getPath())
+                                                .getAbsolutePath()),
+                                TMP_DIR + getOAuth2MockServerConfig())
+                        .withEnv(
+                                "MOCKSERVER_INITIALIZATION_JSON_PATH",
+                                TMP_DIR + getOAuth2MockServerConfig())
                         .withEnv("MOCKSERVER_LOG_LEVEL", "WARN")
                         .withLogConsumer(
                                 new Slf4jLogConsumer(
-                                        DockerLoggerFactory.getLogger(OAUTH2_MOCK_IMAGE)));
+                                        DockerLoggerFactory.getLogger(OAUTH2_MOCK_IMAGE)))
+                        .waitingFor(new HttpWaitStrategy().forPath("/").forStatusCode(404));
 
         Startables.deepStart(Stream.of(oauth2MockServer)).join();
 
-        // Set the OAuth2 token URL using the actual host and port
         validOAuthTokenUrl =
                 "http://"
                         + oauth2MockServer.getHost()
@@ -161,51 +182,10 @@ public class ElasticsearchAuthIT extends TestSuiteBase implements TestResource {
                         + oauth2MockServer.getMappedPort(1080)
                         + "/oauth/token";
         log.info("OAuth2 token URL set to: {}", validOAuthTokenUrl);
-
-        setupOAuth2MockEndpoints();
-        log.info("OAuth2 mock server started for authentication testing");
     }
 
-    private void setupOAuth2MockEndpoints() {
-        try {
-            TimeUnit.SECONDS.sleep(2); // Wait for mock server to be ready
-
-            String mockResponse =
-                    "{"
-                            + "\"access_token\": \"mock-access-token-12345\","
-                            + "\"token_type\": \"Bearer\","
-                            + "\"expires_in\": 3600"
-                            + "}";
-
-            Container.ExecResult result =
-                    oauth2MockServer.execInContainer(
-                            "curl",
-                            "-X",
-                            "PUT",
-                            "http://localhost:1080/mockserver/expectation",
-                            "-H",
-                            "Content-Type: application/json",
-                            "-d",
-                            "{"
-                                    + "\"httpRequest\": {"
-                                    + "\"method\": \"POST\","
-                                    + "\"path\": \"/oauth/token\""
-                                    + "},"
-                                    + "\"httpResponse\": {"
-                                    + "\"statusCode\": 200,"
-                                    + "\"headers\": {\"Content-Type\": [\"application/json\"]},"
-                                    + "\"body\": \""
-                                    + mockResponse.replace("\"", "\\\"")
-                                    + "\""
-                                    + "}"
-                                    + "}");
-
-            if (result.getExitCode() == 0) {
-                log.info("OAuth2 mock endpoint configured successfully");
-            }
-        } catch (Exception e) {
-            log.warn("Failed to setup OAuth2 mock server", e);
-        }
+    public String getOAuth2MockServerConfig() {
+        return "/oauth2-mockserver-config.json";
     }
 
     private void createTestIndex() throws Exception {
