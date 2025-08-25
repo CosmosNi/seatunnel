@@ -22,6 +22,7 @@ import org.apache.seatunnel.api.table.connector.TableTransform;
 import org.apache.seatunnel.api.table.factory.Factory;
 import org.apache.seatunnel.api.table.factory.TableTransformFactory;
 import org.apache.seatunnel.api.table.factory.TableTransformFactoryContext;
+import org.apache.seatunnel.transform.common.TransformCommonOptions;
 
 import com.google.auto.service.AutoService;
 
@@ -47,6 +48,7 @@ public class VectorDimensionReductionTransformFactory implements TableTransformF
                 .required(TARGET_DIMENSION)
                 .optional(REDUCTION_METHOD)
                 .optional(BATCH_SIZE)
+                .optional(TransformCommonOptions.MULTI_TABLES)
                 .build();
     }
 
