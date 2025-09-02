@@ -49,6 +49,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -129,6 +130,17 @@ public class PostgresJdbcRowConverter extends AbstractJdbcRowConverter {
                             Optional.ofNullable(sqlTimestamp)
                                     .map(e -> e.toLocalDateTime())
                                     .orElse(null);
+                    break;
+                case TIMESTAMP_TZ:
+                    Object raw = rs.getObject(resultSetIndex);
+                    if (raw == null) {
+                        fields[fieldIndex] = null;
+                    } else if (raw instanceof OffsetDateTime) {
+                        fields[fieldIndex] = raw;
+                    } else {
+                        String s = rs.getString(resultSetIndex);
+                        fields[fieldIndex] = s == null ? null : OffsetDateTime.parse(s);
+                    }
                     break;
                 case BYTES:
                     fields[fieldIndex] = JdbcFieldTypeUtils.getBytes(rs, resultSetIndex);
@@ -252,6 +264,10 @@ public class PostgresJdbcRowConverter extends AbstractJdbcRowConverter {
                         LocalDateTime localDateTime = (LocalDateTime) row.getField(fieldIndex);
                         statement.setTimestamp(
                                 statementIndex, java.sql.Timestamp.valueOf(localDateTime));
+                        break;
+                    case TIMESTAMP_TZ:
+                        statement.setObject(
+                                statementIndex, (OffsetDateTime) row.getField(fieldIndex));
                         break;
                     case BYTES:
                         statement.setBytes(statementIndex, (byte[]) row.getField(fieldIndex));

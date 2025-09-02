@@ -262,8 +262,19 @@ public class PostgresTypeConverter implements TypeConverter<BasicTypeDefine> {
                 }
                 break;
             case PG_TIMESTAMP:
-            case PG_TIMESTAMP_TZ:
                 builder.dataType(LocalTimeType.LOCAL_DATE_TIME_TYPE);
+                if (typeDefine.getScale() != null && typeDefine.getScale() > MAX_TIMESTAMP_SCALE) {
+                    builder.scale(MAX_TIMESTAMP_SCALE);
+                    log.warn(
+                            "The scale of timestamp type is larger than {}, it will be truncated to {}",
+                            MAX_TIMESTAMP_SCALE,
+                            MAX_TIMESTAMP_SCALE);
+                } else {
+                    builder.scale(typeDefine.getScale());
+                }
+                break;
+            case PG_TIMESTAMP_TZ:
+                builder.dataType(LocalTimeType.OFFSET_DATE_TIME_TYPE);
                 if (typeDefine.getScale() != null && typeDefine.getScale() > MAX_TIMESTAMP_SCALE) {
                     builder.scale(MAX_TIMESTAMP_SCALE);
                     log.warn(
@@ -443,6 +454,27 @@ public class PostgresTypeConverter implements TypeConverter<BasicTypeDefine> {
                 }
                 builder.dataType(PG_TIMESTAMP);
                 builder.scale(timestampScale);
+                break;
+            case TIMESTAMP_TZ:
+                Integer timestampTzScale = column.getScale();
+                if (timestampTzScale != null && timestampTzScale > MAX_TIMESTAMP_SCALE) {
+                    timestampTzScale = MAX_TIMESTAMP_SCALE;
+                    log.warn(
+                            "The timestamp with time zone column {} type timestamptz({}) is out of range, "
+                                    + "which exceeds the maximum scale of {}, "
+                                    + "it will be converted to timestamptz({})",
+                            column.getName(),
+                            column.getScale(),
+                            MAX_TIMESTAMP_SCALE,
+                            timestampTzScale);
+                }
+                if (timestampTzScale != null && timestampTzScale > 0) {
+                    builder.columnType(String.format("%s(%s)", PG_TIMESTAMP_TZ, timestampTzScale));
+                } else {
+                    builder.columnType(PG_TIMESTAMP_TZ);
+                }
+                builder.dataType(PG_TIMESTAMP_TZ);
+                builder.scale(timestampTzScale);
                 break;
             case ARRAY:
                 ArrayType arrayType = (ArrayType) column.getDataType();
